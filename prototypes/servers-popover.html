@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stats · 云服务器监控 UI 原型</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #e8e9ed;
+      --panel: rgba(249, 249, 251, 0.94);
+      --control: rgba(255, 255, 255, 0.72);
+      --control-hover: rgba(0, 0, 0, 0.055);
+      --label: #1d1d1f;
+      --secondary: #6e6e73;
+      --separator: rgba(0, 0, 0, 0.1);
+      --blue: #007aff;
+      --green: #28a745;
+      --orange: #e88900;
+      --red: #d70015;
+      --shadow: 0 22px 55px rgba(0, 0, 0, 0.2), 0 2px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --canvas: #17181b;
+      --panel: rgba(35, 35, 38, 0.94);
+      --control: rgba(255, 255, 255, 0.065);
+      --control-hover: rgba(255, 255, 255, 0.1);
+      --label: #f5f5f7;
+      --secondary: #9c9ca1;
+      --separator: rgba(255, 255, 255, 0.11);
+      --blue: #0a84ff;
+      --green: #30d158;
+      --orange: #ffd60a;
+      --red: #ff453a;
+      --shadow: 0 24px 65px rgba(0, 0, 0, 0.55), 0 2px 12px rgba(0, 0, 0, 0.32);
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    button { font: inherit; }
+    button, svg { -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background: var(--canvas);
+      color: var(--label);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      font-size: 13px;
+      transition: background-color 180ms ease, color 180ms ease;
+    }
+
+    .prototype-note {
+      position: fixed;
+      z-index: 5;
+      top: 52px;
+      left: 32px;
+      color: var(--secondary);
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+    }
+
+    .prototype-note span {
+      display: block;
+      margin-top: 7px;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .appearance {
+      position: fixed;
+      z-index: 30;
+      right: 28px;
+      bottom: 24px;
+    }
+
+    .demo-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      padding: 0 10px;
+      border: 1px solid var(--separator);
+      border-radius: 8px;
+      background: var(--control);
+      color: var(--secondary);
+      cursor: pointer;
+    }
+
+    .demo-button:hover { color: var(--label); }
+
+    .stage {
+      position: relative;
+      width: min(960px, 100%);
+      min-height: 680px;
+      margin: 0 auto;
+      padding-top: 118px;
+    }
+
+    .menubar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 34px;
+      border-bottom: 1px solid var(--separator);
+      background: var(--panel);
+      color: var(--secondary);
+      font-size: 12px;
+      backdrop-filter: blur(24px) saturate(140%);
+    }
+
+    .menu-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      height: 100%;
+      padding-left: 24px;
+    }
+
+    .menu-left strong { color: var(--label); font-weight: 600; }
+
+    .stats-widget {
+      position: absolute;
+      top: 4px;
+      right: 22px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      height: 26px;
+      padding: 0 9px;
+      border-radius: 6px;
+      background: var(--control);
+      color: var(--label);
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .popover {
+      position: absolute;
+      z-index: 10;
+      top: 43px;
+      right: 16px;
+      width: 356px;
+      overflow: visible;
+      border: 1px solid var(--separator);
+      border-radius: 15px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(28px) saturate(145%);
+    }
+
+    .popover-arrow {
+      position: absolute;
+      top: -6px;
+      right: 46px;
+      width: 12px;
+      height: 12px;
+      border-top: 1px solid var(--separator);
+      border-left: 1px solid var(--separator);
+      background: var(--panel);
+      transform: rotate(45deg);
+    }
+
+    .panel-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 16px 9px;
+      color: var(--secondary);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      display: inline-block;
+      flex: 0 0 auto;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 12%, transparent);
+    }
+
+    .status-dot.error {
+      background: var(--red);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 12%, transparent);
+    }
+
+    .server-picker { position: relative; padding: 0 10px 12px; }
+
+    .server-trigger {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      min-height: 56px;
+      padding: 8px 11px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: var(--control);
+      color: var(--label);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .server-trigger:hover, .server-trigger[aria-expanded="true"] {
+      border-color: var(--separator);
+      background: var(--control-hover);
+    }
+
+    .server-trigger .status-dot { margin: 0 11px 0 2px; }
+
+    .server-copy { min-width: 0; flex: 1; }
+    .server-copy strong {
+      display: block;
+      overflow: hidden;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .server-copy span {
+      display: block;
+      overflow: hidden;
+      margin-top: 3px;
+      color: var(--secondary);
+      font-size: 10px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .chevron { flex: 0 0 auto; margin-left: 10px; color: var(--secondary); transition: transform 150ms ease; }
+    .server-trigger[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+    .server-menu {
+      position: absolute;
+      z-index: 25;
+      top: calc(100% - 6px);
+      left: 10px;
+      right: 10px;
+      padding: 5px;
+      border: 1px solid var(--separator);
+      border-radius: 11px;
+      background: var(--panel);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(28px) saturate(145%);
+    }
+
+    .server-option {
+      display: grid;
+      grid-template-columns: 8px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 47px;
+      padding: 6px 9px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--label);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .server-option:hover, .server-option:focus-visible, .server-option[aria-selected="true"] {
+      background: var(--control-hover);
+    }
+
+    .option-copy { min-width: 0; }
+    .option-copy strong { display: block; font-size: 12px; font-weight: 500; }
+    .option-copy small { display: block; margin-top: 2px; color: var(--secondary); font-size: 10px; }
+    .option-metric { color: var(--secondary); font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 10px; }
+
+    .error-banner {
+      margin: 0 14px 12px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--red) 10%, transparent);
+      color: var(--red);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-top: 1px solid var(--separator);
+      border-bottom: 1px solid var(--separator);
+    }
+
+    .metric { min-width: 0; padding: 14px 16px 10px; }
+    .metric + .metric { border-left: 1px solid var(--separator); }
+
+    .metric-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--secondary);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .metric-label.cpu svg { color: var(--blue); }
+    .metric-label.memory svg { color: var(--green); }
+
+    .metric-value {
+      margin-top: 8px;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.055em;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-detail {
+      min-height: 15px;
+      margin-top: 6px;
+      color: var(--secondary);
+      font-size: 10px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sparkline { display: block; width: 100%; height: 43px; margin-top: 5px; overflow: visible; }
+    .sparkline.cpu { color: var(--blue); }
+    .sparkline.memory { color: var(--green); }
+
+    .disk-section { padding: 13px 16px 12px; border-bottom: 1px solid var(--separator); }
+
+    .disk-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .disk-name { display: flex; align-items: center; gap: 6px; color: var(--secondary); font-size: 11px; }
+    .disk-name svg { color: var(--orange); }
+    .disk-name code { color: var(--label); font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; }
+    .disk-percent { color: var(--orange); font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12px; font-weight: 600; }
+    .disk-detail { margin-top: 5px; color: var(--secondary); font-size: 10px; font-variant-numeric: tabular-nums; }
+
+    .usage-track { height: 4px; margin-top: 10px; overflow: hidden; border-radius: 4px; background: var(--control-hover); }
+    .usage-fill { height: 100%; border-radius: inherit; background: var(--orange); transition: width 240ms ease; }
+
+    .network-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--separator);
+      font-size: 10px;
+    }
+
+    .network-values { display: flex; gap: 14px; }
+    .network-item { display: inline-flex; align-items: center; gap: 5px; color: var(--secondary); }
+    .network-item strong { color: var(--label); font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-weight: 500; font-variant-numeric: tabular-nums; }
+    .network-item.download svg { color: var(--blue); }
+    .network-item.upload svg { color: var(--green); }
+    .latency { color: var(--secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    .system-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 16px;
+      color: var(--secondary);
+      font-size: 10px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .panel-footer {
+      display: grid;
+      grid-template-columns: 1fr auto 28px;
+      align-items: center;
+      gap: 8px;
+      min-height: 43px;
+      padding: 6px 10px 6px 14px;
+      border-top: 1px solid var(--separator);
+    }
+
+    .footer-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: fit-content;
+      min-height: 28px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--secondary);
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .footer-button:hover { color: var(--label); }
+    .updated { color: var(--secondary); font-size: 10px; white-space: nowrap; }
+
+    .icon-button {
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--secondary);
+      cursor: pointer;
+    }
+
+    .icon-button:hover { background: var(--control-hover); color: var(--label); }
+    .icon-button.loading svg { animation: spin 650ms linear infinite; }
+
+    .prototype-caption {
+      position: absolute;
+      top: 552px;
+      right: 20px;
+      width: 348px;
+      color: var(--secondary);
+      font-size: 10px;
+      text-align: center;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 50;
+      left: 50%;
+      bottom: 24px;
+      max-width: calc(100vw - 32px);
+      padding: 9px 13px;
+      border: 1px solid var(--separator);
+      border-radius: 9px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      color: var(--label);
+      font-size: 11px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 8px);
+      transition: opacity 150ms ease, transform 150ms ease;
+    }
+
+    .toast.visible { opacity: 1; transform: translate(-50%, 0); }
+
+    button:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 2px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 560px) {
+      .prototype-note { top: 48px; left: 14px; }
+      .prototype-note span { display: none; }
+      .appearance { right: 12px; bottom: 14px; }
+      .stage { min-height: 650px; }
+      .menu-left { gap: 12px; padding-left: 14px; }
+      .menu-left span:last-child { display: none; }
+      .stats-widget { right: 10px; }
+      .popover { right: 10px; left: 10px; width: auto; }
+      .popover-arrow { right: 48px; }
+      .prototype-caption { top: 552px; right: 10px; left: 10px; width: auto; }
+      .network-row { gap: 8px; }
+      .network-values { gap: 9px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="prototype-note">STATS / SERVERS<span>原生菜单栏弹窗 · 可交互 UI 原型</span></div>
+  <div class="appearance">
+    <button class="demo-button" id="themeToggle" type="button" aria-label="切换到浅色外观">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16Z" fill="currentColor" stroke="none"/></svg>
+      <span id="themeLabel">浅色</span>
+    </button>
+  </div>
+
+  <main class="stage">
+    <div class="menubar" aria-label="macOS 菜单栏示意">
+      <div class="menu-left"><strong>Stats</strong><span>本机 12%</span><span>内存 38%</span></div>
+      <div class="stats-widget" id="menuWidget"><span class="status-dot"></span><span>hk-01&nbsp; 24%&nbsp; 61%</span></div>
+    </div>
+
+    <section class="popover" aria-label="云服务器监控弹窗">
+      <div class="popover-arrow" aria-hidden="true"></div>
+      <div class="panel-heading"><span>云服务器</span><span class="live-badge" id="liveBadge"><span class="status-dot"></span><span>在线</span></span></div>
+
+      <div class="server-picker">
+        <button class="server-trigger" id="serverTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="serverMenu">
+          <span class="status-dot" id="selectedDot"></span>
+          <span class="server-copy"><strong id="serverName">prod-hk-01</strong><span id="serverSubtitle">Ubuntu 24.04 LTS · 10.0.0.12</span></span>
+          <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="server-menu" id="serverMenu" role="listbox" aria-label="选择服务器" hidden></div>
+      </div>
+
+      <div class="error-banner" id="errorBanner" role="status" hidden>SSH 连接超时。显示 3 分钟前的最后快照。</div>
+
+      <div class="metrics">
+        <article class="metric">
+          <div class="metric-label cpu">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 1v3m6-3v3M9 20v3m6-3v3M1 9h3m-3 6h3m16-6h3m-3 6h3"/></svg>
+            CPU
+          </div>
+          <div class="metric-value" id="cpuValue">23.8%</div>
+          <div class="metric-detail" id="cpuDetail">4 核 · Load 0.86</div>
+          <svg class="sparkline cpu" id="cpuSpark" viewBox="0 0 150 44" preserveAspectRatio="none" role="img" aria-label="CPU 最近趋势"></svg>
+        </article>
+
+        <article class="metric">
+          <div class="metric-label memory">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10v4m5-4v4m5-4v4M7 3v3m5-3v3m5-3v3M7 18v3m5-3v3m5-3v3"/></svg>
+            内存
+          </div>
+          <div class="metric-value" id="memoryValue">61.4%</div>
+          <div class="metric-detail" id="memoryDetail">9.8 / 16 GB</div>
+          <svg class="sparkline memory" id="memorySpark" viewBox="0 0 150 44" preserveAspectRatio="none" role="img" aria-label="内存最近趋势"></svg>
+        </article>
+      </div>
+
+      <section class="disk-section" aria-label="根分区磁盘使用率">
+        <div class="disk-heading">
+          <div class="disk-name">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7h16v10H4z"/><path d="m5 7 2-3h10l2 3M16 12h.01"/></svg>
+            磁盘 <code>/</code>
+          </div>
+          <strong class="disk-percent" id="diskValue">68.2%</strong>
+        </div>
+        <div class="disk-detail" id="diskDetail">已用 136.4 GB，共 200 GB</div>
+        <div class="usage-track" role="meter" aria-label="磁盘使用率" aria-valuemin="0" aria-valuemax="100" aria-valuenow="68.2" id="diskMeter"><div class="usage-fill" id="diskFill" style="width:68.2%"></div></div>
+      </section>
+
+      <div class="network-row">
+        <div class="network-values">
+          <span class="network-item download"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14m-5-5 5 5 5-5M5 21h14"/></svg><strong id="rxValue">1.2 MB/s</strong></span>
+          <span class="network-item upload"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21V7m-5 5 5-5 5 5M5 3h14"/></svg><strong id="txValue">380 KB/s</strong></span>
+        </div>
+        <span class="latency" id="latencyValue">SSH 38 ms</span>
+      </div>
+
+      <div class="system-row"><span id="loadValue">Load 0.86&nbsp; 0.72&nbsp; 0.64</span><span id="uptimeValue">运行 18 天</span></div>
+
+      <footer class="panel-footer">
+        <button class="footer-button" id="manageButton" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7h10m4 0h2M4 17h2m4 0h10M14 4v6M6 14v6"/></svg>
+          管理服务器
+        </button>
+        <span class="updated" id="updatedLabel">刚刚更新</span>
+        <button class="icon-button" id="refreshButton" type="button" aria-label="立即刷新">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5"/><path d="M6.1 9a7 7 0 0 1 11.6-3L20 11M4 13l2.3 5a7 7 0 0 0 11.6-3"/></svg>
+        </button>
+      </footer>
+    </section>
+
+    <div class="prototype-caption">菜单栏 → 下拉面板 · 演示数据，不连接真实服务器</div>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const servers = [
+      {
+        id: "hk", name: "prod-hk-01", short: "hk-01", os: "Ubuntu 24.04 LTS", address: "10.0.0.12", status: "online",
+        cpu: 23.8, cores: 4, memory: 61.4, memoryDetail: "9.8 / 16 GB", disk: 68.2, diskDetail: "已用 136.4 GB，共 200 GB",
+        rx: "1.2 MB/s", tx: "380 KB/s", latency: "SSH 38 ms", load: "0.86  0.72  0.64", loadShort: "0.86", uptime: "运行 18 天", updated: "刚刚更新",
+        cpuTrend: [16, 18, 17, 22, 20, 31, 28, 24, 27, 21, 19, 26, 24, 29, 23.8],
+        memoryTrend: [58, 58.4, 58.8, 59.1, 59.3, 59.8, 60.1, 60, 60.4, 60.8, 61, 60.7, 61.1, 61.2, 61.4]
+      },
+      {
+        id: "sg", name: "prod-sg-02", short: "sg-02", os: "Debian 13", address: "10.0.0.18", status: "online",
+        cpu: 72.1, cores: 8, memory: 80.3, memoryDetail: "25.7 / 32 GB", disk: 47.8, diskDetail: "已用 239 GB，共 500 GB",
+        rx: "8.6 MB/s", tx: "2.1 MB/s", latency: "SSH 74 ms", load: "3.42  2.88  2.31", loadShort: "3.42", uptime: "运行 42 天", updated: "2 秒前更新",
+        cpuTrend: [52, 55, 61, 58, 64, 69, 66, 73, 78, 74, 70, 76, 71, 69, 72.1],
+        memoryTrend: [76, 76.5, 77, 77.1, 77.8, 78, 78.4, 78.8, 79.2, 79, 79.6, 79.9, 80, 80.1, 80.3]
+      },
+      {
+        id: "backup", name: "backup-01", short: "backup", os: "Ubuntu 22.04 LTS", address: "10.0.1.9", status: "error",
+        cpu: 14.2, cores: 2, memory: 48.6, memoryDetail: "3.9 / 8 GB", disk: 91.7, diskDetail: "已用 91.7 GB，共 100 GB",
+        rx: "--", tx: "--", latency: "连接超时", load: "0.31  0.28  0.22", loadShort: "0.31", uptime: "最后在线：3 分钟前", updated: "3 分钟前更新",
+        cpuTrend: [12, 15, 13, 17, 16, 12, 11, 14, 18, 16, 13, 15, 14, 14, 14.2],
+        memoryTrend: [47, 47.2, 47.4, 47.4, 47.8, 48, 48.1, 48.1, 48.3, 48.4, 48.4, 48.5, 48.5, 48.6, 48.6]
+      }
+    ];
+
+    const byId = id => document.getElementById(id);
+    const trigger = byId("serverTrigger");
+    const menu = byId("serverMenu");
+    let selectedId = "hk";
+    let toastTimer;
+
+    function sparkline(element, values, color) {
+      const width = 150;
+      const height = 38;
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = Math.max(max - min, 4);
+      const points = values.map((value, index) => {
+        const x = index * width / (values.length - 1);
+        const y = 3 + (max - value) / range * (height - 8);
+        return [x, y];
+      });
+      const line = points.map(([x, y], index) => `${index ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+      const area = `${line} L${width},42 L0,42 Z`;
+      const [lastX, lastY] = points[points.length - 1];
+      element.innerHTML = `<path d="M0 41.5H150" stroke="currentColor" stroke-opacity=".13" stroke-dasharray="2 3"/><path d="${area}" fill="currentColor" fill-opacity=".08"/><path d="${line}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><circle cx="${lastX}" cy="${lastY}" r="2.3" fill="currentColor"/>`;
+      element.style.color = color;
+    }
+
+    function renderMenu() {
+      menu.innerHTML = "";
+      servers.forEach(server => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "server-option";
+        option.id = `server-${server.id}`;
+        option.setAttribute("role", "option");
+        option.setAttribute("aria-selected", String(server.id === selectedId));
+        option.innerHTML = `<span class="status-dot ${server.status === "error" ? "error" : ""}"></span><span class="option-copy"><strong>${server.name}</strong><small>${server.status === "error" ? "采集失败 · 最后快照" : `${server.os} · ${server.latency}`}</small></span><span class="option-metric">${server.status === "error" ? "--" : `${server.cpu.toFixed(0)}%`}</span>`;
+        option.addEventListener("click", () => selectServer(server.id));
+        option.addEventListener("keydown", event => moveFocus(event, server.id));
+        menu.appendChild(option);
+      });
+    }
+
+    function selectServer(id) {
+      selectedId = id;
+      const server = servers.find(item => item.id === id);
+      const isError = server.status === "error";
+      byId("serverName").textContent = server.name;
+      byId("serverSubtitle").textContent = `${server.os} · ${server.address}`;
+      byId("selectedDot").classList.toggle("error", isError);
+      byId("liveBadge").innerHTML = `<span class="status-dot ${isError ? "error" : ""}"></span><span>${isError ? "采集失败" : "在线"}</span>`;
+      byId("errorBanner").hidden = !isError;
+      byId("cpuValue").textContent = `${server.cpu.toFixed(1)}%`;
+      byId("cpuDetail").textContent = `${server.cores} 核 · Load ${server.loadShort}`;
+      byId("memoryValue").textContent = `${server.memory.toFixed(1)}%`;
+      byId("memoryDetail").textContent = server.memoryDetail;
+      byId("diskValue").textContent = `${server.disk.toFixed(1)}%`;
+      byId("diskDetail").textContent = server.diskDetail;
+      byId("diskFill").style.width = `${server.disk}%`;
+      byId("diskMeter").setAttribute("aria-valuenow", String(server.disk));
+      byId("rxValue").textContent = server.rx;
+      byId("txValue").textContent = server.tx;
+      byId("latencyValue").textContent = server.latency;
+      byId("loadValue").textContent = `Load ${server.load}`;
+      byId("uptimeValue").textContent = server.uptime;
+      byId("updatedLabel").textContent = server.updated;
+      byId("menuWidget").innerHTML = `<span class="status-dot ${isError ? "error" : ""}"></span><span>${server.short}&nbsp; ${isError ? "--" : `${server.cpu.toFixed(0)}%&nbsp; ${server.memory.toFixed(0)}%`}</span>`;
+      sparkline(byId("cpuSpark"), server.cpuTrend, "var(--blue)");
+      sparkline(byId("memorySpark"), server.memoryTrend, "var(--green)");
+      renderMenu();
+      closeMenu();
+    }
+
+    function openMenu(focusSelected = false) {
+      renderMenu();
+      menu.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+      if (focusSelected) byId(`server-${selectedId}`).focus();
+    }
+
+    function closeMenu() {
+      menu.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+    }
+
+    function moveFocus(event, id) {
+      const index = servers.findIndex(server => server.id === id);
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const direction = event.key === "ArrowDown" ? 1 : -1;
+        const next = (index + direction + servers.length) % servers.length;
+        byId(`server-${servers[next].id}`).focus();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        closeMenu();
+        trigger.focus();
+      }
+    }
+
+    function showToast(message) {
+      clearTimeout(toastTimer);
+      byId("toast").textContent = message;
+      byId("toast").classList.add("visible");
+      toastTimer = setTimeout(() => byId("toast").classList.remove("visible"), 2200);
+    }
+
+    trigger.addEventListener("click", () => menu.hidden ? openMenu() : closeMenu());
+    trigger.addEventListener("keydown", event => {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        openMenu(true);
+      } else if (event.key === "Escape") closeMenu();
+    });
+
+    document.addEventListener("click", event => {
+      if (!event.target.closest(".server-picker")) closeMenu();
+    });
+
+    byId("themeToggle").addEventListener("click", () => {
+      const dark = document.documentElement.dataset.theme === "dark";
+      document.documentElement.dataset.theme = dark ? "light" : "dark";
+      byId("themeLabel").textContent = dark ? "深色" : "浅色";
+      byId("themeToggle").setAttribute("aria-label", dark ? "切换到深色外观" : "切换到浅色外观");
+    });
+
+    byId("refreshButton").addEventListener("click", () => {
+      const button = byId("refreshButton");
+      button.classList.add("loading");
+      button.disabled = true;
+      byId("updatedLabel").textContent = "正在采集…";
+      setTimeout(() => {
+        button.classList.remove("loading");
+        button.disabled = false;
+        byId("updatedLabel").textContent = "刚刚更新";
+        showToast("演示数据已刷新");
+      }, 650);
+    });
+
+    byId("manageButton").addEventListener("click", () => showToast("正式版将在这里打开服务器设置"));
+    selectServer(selectedId);
+  </script>
+</body>
+</html>

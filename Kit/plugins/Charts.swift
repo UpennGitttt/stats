@@ -856,6 +856,11 @@ public class NetworkChartView: ChartView {
         self.outChart.addValue(DoubleValue(upload))
     }
     
+    public func setPoints(upload: [DoubleValue], download: [DoubleValue]) {
+        self.inChart.setPoints(download)
+        self.outChart.setPoints(upload)
+    }
+
     public func reinit(_ num: Int = 60) {
         self.inChart.reinit(num)
         self.outChart.reinit(num)

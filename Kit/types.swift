@@ -15,7 +15,8 @@ public struct DoubleValue {
     public var ts: Date = Date()
     public let value: Double
     
-    public init(_ value: Double = 0) {
+    public init(_ value: Double = 0, ts: Date = Date()) {
+        self.ts = ts
         self.value = value
     }
 }

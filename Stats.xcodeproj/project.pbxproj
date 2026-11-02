@@ -224,6 +224,19 @@
 		9AF9EE0F2464875F005D2270 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF9EE0E2464875F005D2270 /* main.swift */; };
 		9AF9EE1124648ADC005D2270 /* readers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF9EE1024648ADC005D2270 /* readers.swift */; };
 		AA00000000000000000000A1 /* libIOReport.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1E45552D11D66200525864 /* libIOReport.tbd */; };
+		5E5E00112FC0000000000001 /* Servers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E5E00102FC0000000000001 /* Servers.framework */; };
+		5E5E00122FC0000000000001 /* Servers.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5E5E00102FC0000000000001 /* Servers.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		5E5E00212FC0000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00202FC0000000000001 /* main.swift */; };
+		5E5E00232FC0000000000001 /* model.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00302FC0000000000001 /* model.swift */; };
+		5E5E00242FC0000000000001 /* reader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00312FC0000000000001 /* reader.swift */; };
+		5E5E00252FC0000000000001 /* ssh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00322FC0000000000001 /* ssh.swift */; };
+		5E5E00262FC0000000000001 /* parser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00332FC0000000000001 /* parser.swift */; };
+		5E5E00272FC0000000000001 /* popup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00342FC0000000000001 /* popup.swift */; };
+		5E5E00282FC0000000000001 /* settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00352FC0000000000001 /* settings.swift */; };
+		5E5E00292FC0000000000001 /* config.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5E5E00362FC0000000000001 /* config.plist */; };
+		5E5E002A2FC0000000000001 /* Kit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A2846F72666A9CC00EC1F6D /* Kit.framework */; };
+		5E5E00512FC0000000000001 /* Servers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00502FC0000000000001 /* Servers.swift */; };
+		5E5E00522FC0000000000001 /* Servers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5E5E00102FC0000000000001 /* Servers.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -291,6 +304,20 @@
 			remoteInfo = Remote;
 		};
 		5E0C63602FBDB87A00D9BA3E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A1410ED229E721100D29793 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9A2846F62666A9CC00EC1F6D;
+			remoteInfo = Kit;
+		};
+		5E5E00132FC0000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A1410ED229E721100D29793 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5E5E00002FC0000000000001;
+			remoteInfo = Servers;
+		};
+		5E5E00142FC0000000000001 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 9A1410ED229E721100D29793 /* Project object */;
 			proxyType = 1;
@@ -498,6 +525,7 @@
 				9AF9EE0A24648751005D2270 /* Disk.framework in Embed Frameworks */,
 				5C2229A429CCB3C400F00E69 /* Clock.framework in Embed Frameworks */,
 				5E0C63502FBDB7DE00D9BA3E /* Remote.framework in Embed Frameworks */,
+				5E5E00122FC0000000000001 /* Servers.framework in Embed Frameworks */,
 				9A81C75E2449A41400825D92 /* RAM.framework in Embed Frameworks */,
 				9AE29ADD249A50350071B02D /* Sensors.framework in Embed Frameworks */,
 				9A11AAD7266FD77F000C1C05 /* Bluetooth.framework in Embed Frameworks */,
@@ -633,6 +661,16 @@
 		5E0C63652FBE3F4E00D9BA3E /* settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = settings.swift; sourceTree = "<group>"; };
 		5E0C63672FBE5F0000D9BA3E /* reader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = reader.swift; sourceTree = "<group>"; };
 		5E0C636F2FBE4A0000D9BA3E /* popup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = popup.swift; sourceTree = "<group>"; };
+		5E5E00102FC0000000000001 /* Servers.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Servers.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		5E5E00202FC0000000000001 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		5E5E00302FC0000000000001 /* model.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = model.swift; sourceTree = "<group>"; };
+		5E5E00312FC0000000000001 /* reader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = reader.swift; sourceTree = "<group>"; };
+		5E5E00322FC0000000000001 /* ssh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ssh.swift; sourceTree = "<group>"; };
+		5E5E00332FC0000000000001 /* parser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = parser.swift; sourceTree = "<group>"; };
+		5E5E00342FC0000000000001 /* popup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = popup.swift; sourceTree = "<group>"; };
+		5E5E00352FC0000000000001 /* settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = settings.swift; sourceTree = "<group>"; };
+		5E5E00362FC0000000000001 /* config.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config.plist; sourceTree = "<group>"; };
+		5E5E00502FC0000000000001 /* Servers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Servers.swift; sourceTree = "<group>"; };
 		5E8289FF3074085D00DB0CA0 /* Icon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Icon.swift; sourceTree = "<group>"; };
 		5EC1B2E42E2FEAFB007042A6 /* UnitedWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnitedWidget.swift; sourceTree = "<group>"; };
 		5EE5C0B83062FEA400E7DAB4 /* install.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = install.sh; sourceTree = "<group>"; };
@@ -825,6 +863,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5E5E00422FC0000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E5E002A2FC0000000000001 /* Kit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9A11AACC266FD77F000C1C05 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -840,6 +886,7 @@
 				9AF9EE0924648751005D2270 /* Disk.framework in Frameworks */,
 				5C2229A329CCB3C400F00E69 /* Clock.framework in Frameworks */,
 				5E0C634F2FBDB7DE00D9BA3E /* Remote.framework in Frameworks */,
+				5E5E00112FC0000000000001 /* Servers.framework in Frameworks */,
 				9AE29ADC249A50350071B02D /* Sensors.framework in Frameworks */,
 				9ABFF8FD248BEBCB00C9041A /* Battery.framework in Frameworks */,
 				9A11AAD6266FD77F000C1C05 /* Bluetooth.framework in Frameworks */,
@@ -906,6 +953,7 @@
 			files = (
 				8B3025000000000000000003 /* Bluetooth.framework in Frameworks */,
 				8B3679000000000000000001 /* Disk.framework in Frameworks */,
+				5E5E00522FC0000000000001 /* Servers.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1035,6 +1083,21 @@
 			path = Remote;
 			sourceTree = "<group>";
 		};
+		5E5E00452FC0000000000001 /* Servers */ = {
+			isa = PBXGroup;
+			children = (
+				5E5E00202FC0000000000001 /* main.swift */,
+				5E5E00302FC0000000000001 /* model.swift */,
+				5E5E00312FC0000000000001 /* reader.swift */,
+				5E5E00322FC0000000000001 /* ssh.swift */,
+				5E5E00332FC0000000000001 /* parser.swift */,
+				5E5E00342FC0000000000001 /* popup.swift */,
+				5E5E00352FC0000000000001 /* settings.swift */,
+				5E5E00362FC0000000000001 /* config.plist */,
+			);
+			path = Servers;
+			sourceTree = "<group>";
+		};
 		9A11AAD0266FD77F000C1C05 /* Bluetooth */ = {
 			isa = PBXGroup;
 			children = (
@@ -1084,6 +1147,7 @@
 				5C22299D29CCB3C400F00E69 /* Clock.framework */,
 				5CE7E78A2C318512006BC92C /* WidgetsExtension.appex */,
 				5E0C63472FBDB7DE00D9BA3E /* Remote.framework */,
+				5E5E00102FC0000000000001 /* Servers.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -1318,6 +1382,7 @@
 				369463B2B7EA4AF0A895A9B6 /* Kit.swift */,
 				8B3025000000000000000002 /* Bluetooth.swift */,
 				8B3679000000000000000003 /* Disk.swift */,
+				5E5E00502FC0000000000001 /* Servers.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -1335,6 +1400,7 @@
 				9A11AAD0266FD77F000C1C05 /* Bluetooth */,
 				5C22299E29CCB3C400F00E69 /* Clock */,
 				5E0C635B2FBDB82300D9BA3E /* Remote */,
+				5E5E00452FC0000000000001 /* Servers */,
 			);
 			path = Modules;
 			sourceTree = "<group>";
@@ -1601,6 +1667,24 @@
 			productReference = 9A11AACF266FD77F000C1C05 /* Bluetooth.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		5E5E00002FC0000000000001 /* Servers */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E5E00482FC0000000000001 /* Build configuration list for PBXNativeTarget "Servers" */;
+			buildPhases = (
+				5E5E00412FC0000000000001 /* Sources */,
+				5E5E00422FC0000000000001 /* Frameworks */,
+				5E5E00432FC0000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5E5E00152FC0000000000001 /* PBXTargetDependency */,
+			);
+			name = Servers;
+			productName = Servers;
+			productReference = 5E5E00102FC0000000000001 /* Servers.framework */;
+			productType = "com.apple.product-type.framework";
+		};
 		9A1410F4229E721100D29793 /* Stats */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 9A141105229E721200D29793 /* Build configuration list for PBXNativeTarget "Stats" */;
@@ -1632,6 +1716,7 @@
 				5C2229A229CCB3C400F00E69 /* PBXTargetDependency */,
 				5CE7E79B2C318513006BC92C /* PBXTargetDependency */,
 				5E0C634E2FBDB7DE00D9BA3E /* PBXTargetDependency */,
+				5E5E00162FC0000000000001 /* PBXTargetDependency */,
 			);
 			name = Stats;
 			packageProductDependencies = (
@@ -1994,6 +2079,7 @@
 				9A11AACE266FD77F000C1C05 /* Bluetooth */,
 				5C22299C29CCB3C400F00E69 /* Clock */,
 				5E0C63462FBDB7DE00D9BA3E /* Remote */,
+				5E5E00002FC0000000000001 /* Servers */,
 				9AAC5E29280ACC120043D892 /* Tests */,
 				5CFE492629264DF1000F2856 /* Helper */,
 				5CE7E7892C318512006BC92C /* WidgetsExtension */,
@@ -2014,6 +2100,14 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E5E00432FC0000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E5E00292FC0000000000001 /* config.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2211,6 +2305,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5E5E00412FC0000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E5E00212FC0000000000001 /* main.swift in Sources */,
+				5E5E00232FC0000000000001 /* model.swift in Sources */,
+				5E5E00242FC0000000000001 /* reader.swift in Sources */,
+				5E5E00252FC0000000000001 /* ssh.swift in Sources */,
+				5E5E00262FC0000000000001 /* parser.swift in Sources */,
+				5E5E00272FC0000000000001 /* popup.swift in Sources */,
+				5E5E00282FC0000000000001 /* settings.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9A11AACB266FD77F000C1C05 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -2361,6 +2469,7 @@
 				4A05F9BD83C04F70BFFF7F37 /* Kit.swift in Sources */,
 				8B3025000000000000000001 /* Bluetooth.swift in Sources */,
 				8B3679000000000000000002 /* Disk.swift in Sources */,
+				5E5E00512FC0000000000001 /* Servers.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2469,6 +2578,16 @@
 			isa = PBXTargetDependency;
 			target = 9A2846F62666A9CC00EC1F6D /* Kit */;
 			targetProxy = 5E0C63602FBDB87A00D9BA3E /* PBXContainerItemProxy */;
+		};
+		5E5E00152FC0000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9A2846F62666A9CC00EC1F6D /* Kit */;
+			targetProxy = 5E5E00142FC0000000000001 /* PBXContainerItemProxy */;
+		};
+		5E5E00162FC0000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5E5E00002FC0000000000001 /* Servers */;
+			targetProxy = 5E5E00132FC0000000000001 /* PBXContainerItemProxy */;
 		};
 		9A11AAD5266FD77F000C1C05 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2904,6 +3023,91 @@
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
 				PRODUCT_BUNDLE_IDENTIFIER = eu.exelban.Stats.Remote;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_MODULE = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		5E5E00462FC0000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = RP2S87B72W;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = eu.exelban.Stats.Servers;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_MODULE = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		5E5E00472FC0000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = RP2S87B72W;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = eu.exelban.Stats.Servers;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -3955,6 +4159,15 @@
 			buildConfigurations = (
 				9A11AAD8266FD77F000C1C05 /* Debug */,
 				9A11AAD9266FD77F000C1C05 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E5E00482FC0000000000001 /* Build configuration list for PBXNativeTarget "Servers" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E5E00462FC0000000000001 /* Debug */,
+				5E5E00472FC0000000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
