@@ -11,7 +11,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>Stats SSH</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleVersion</key>
 	<string>851</string>
 	<key>Description</key>
-	<string>Simple macOS system monitor in your menu bar</string>
+	<string>Mac and SSH server monitoring in your menu bar</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>
