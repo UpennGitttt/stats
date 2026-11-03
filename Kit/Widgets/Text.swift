@@ -64,8 +64,6 @@ public class TextWidget: WidgetWrapper {
         let origin: CGPoint = CGPoint(x: Constants.Widget.margin.x, y: ((Constants.Widget.height-valueSize-1)/2))
         let rect = CGRect(x: origin.x, y: origin.y, width: width - (Constants.Widget.margin.x*2), height: valueSize)
         attributedString.draw(with: rect)
-        
-        self.setWidth(width)
     }
     
     public func setValue(_ newValue: String) {
@@ -76,10 +74,25 @@ public class TextWidget: WidgetWrapper {
         }
         guard updated else { return }
         DispatchQueue.main.async(execute: {
+            self.setWidth(newValue.isEmpty ? 0 : self.width(for: newValue))
             self.needsDisplay = true
         })
     }
     
+    private func width(for value: String) -> CGFloat {
+        let style = NSMutableParagraphStyle()
+        style.alignment = .center
+        let attributedString = NSAttributedString(string: value, attributes: [
+            .font: NSFont.systemFont(ofSize: 12, weight: .regular),
+            .paragraphStyle: style
+        ])
+        let size = attributedString.boundingRect(
+            with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading]
+        )
+        return (size.width+Constants.Widget.margin.x*2).roundedUpToNearestTen()
+    }
+
     static public func parseText(_ raw: String) -> [KeyValue_t] {
         var pairs: [KeyValue_t] = []
         guard let regex = TextWidget.variableRegex else { return pairs }

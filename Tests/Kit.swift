@@ -65,4 +65,14 @@ class KitTests: XCTestCase {
         XCTAssertEqual(Units(bytes: 500_000).getReadableSpeed(base: .byte, unit: "MB"), "0.5 MB/s")
         XCTAssertEqual(Units(bytes: 500_000).getReadableSpeed(base: .bit, unit: "MB"), "4 Mb/s")
     }
+
+    func testTextWidgetSizesValueBeforeDrawing() {
+        let widget = TextWidget(title: "Servers")
+        let initialWidth = widget.shadowSize.width
+        let widthUpdated = expectation(description: "Text width updated")
+        widget.widthHandler = { widthUpdated.fulfill() }
+        widget.setValue("Servers 100/100")
+        wait(for: [widthUpdated], timeout: 1)
+        XCTAssertGreaterThan(widget.shadowSize.width, initialWidth)
+    }
 }
