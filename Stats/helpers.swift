@@ -238,7 +238,7 @@ extension AppDelegate {
         if !Store.shared.exist(key: "setupProcess") && !Store.shared.exist(key: "runAtLoginInitialized") {
             return
         }
-        if SystemStats.shared.auth.hasCredentials() {
+        if Store.shared.bool(key: "Remote_state", defaultValue: false), SystemStats.shared.auth.hasCredentials() {
             guard let plan = SystemStats.shared.plan else { return }
             if plan != .free { return }
         }
@@ -275,7 +275,7 @@ extension AppDelegate {
     public func tryToShowSupportWindow(interaction: Bool = false) {
         guard Store.shared.bool(key: "support_pending", defaultValue: false) else { return }
         
-        if SystemStats.shared.auth.hasCredentials() {
+        if Store.shared.bool(key: "Remote_state", defaultValue: false), SystemStats.shared.auth.hasCredentials() {
             guard let plan = SystemStats.shared.plan else { return }
             if plan != .free {
                 Store.shared.set(key: "support_pending", value: false)

@@ -155,7 +155,7 @@ public class SystemStats {
             self.logout()
         }
         
-        if self.auth.hasCredentials() {
+        if Store.shared.bool(key: "Remote_state", defaultValue: false), self.auth.hasCredentials() {
             info("Found auth credentials for remote monitoring, starting Remote...", log: self.log)
             self.start()
         }

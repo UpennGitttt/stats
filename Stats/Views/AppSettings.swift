@@ -286,12 +286,12 @@ class ApplicationSettings: NSStackView {
         container.yPlacement = .center
         container.xPlacement = .center
         
-        let iconView: NSImageView = NSImageView(image: NSImage(named: NSImage.Name("AppIcon"))!)
+        let iconView: NSImageView = NSImageView(image: NSImage(named: NSImage.Name("AppIconSSH"))!)
         
         let statsName: NSTextField = TextView(frame: NSRect(x: 0, y: 0, width: view.frame.width, height: 22))
         statsName.alignment = .center
         statsName.font = NSFont.systemFont(ofSize: 20, weight: .regular)
-        statsName.stringValue = "Stats"
+        statsName.stringValue = "Stats SSH"
         statsName.isSelectable = true
         
         let versionNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
