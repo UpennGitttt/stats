@@ -4,6 +4,7 @@ import Kit
 internal final class Popup: PopupWrapper {
     internal var refreshCallback: (() -> Void) = {}
     internal var settingsCallback: (() -> Void) = {}
+    internal var processesCallback: ((ServerConfig) -> Void) = { _ in }
     private let listPage = NSStackView()
     private let listView = NSStackView()
     private let scrollView = NSScrollView()
@@ -140,10 +141,20 @@ internal final class Popup: PopupWrapper {
         self.detailView?.removeFromSuperview()
         let detail = ServerDetailView(server)
         detail.backCallback = { [weak self] in self?.showList() }
+        detail.processesCallback = { [weak self] config in self?.processesCallback(config) }
+        detail.sizeCallback = { [weak self] in self?.recalculateHeight() }
         self.detailView = detail
         self.addArrangedSubview(detail)
         self.listPage.isHidden = true
         self.recalculateHeight()
+    }
+
+    internal func processCallback(_ result: ServerProcessesResult, for config: ServerConfig) {
+        self.detailView?.processCallback(result, for: config)
+    }
+
+    internal func setProcessCount(_ value: Int) {
+        self.detailView?.setProcessCount(value)
     }
 
     private func showList() {
@@ -155,7 +166,11 @@ internal final class Popup: PopupWrapper {
     }
 
     private func recalculateHeight() {
-        let height = self.selectedID == nil ? 36 + (self.scrollHeight?.constant ?? 0) + 37 : 484
+        var height = 36 + (self.scrollHeight?.constant ?? 0) + 37
+        if self.selectedID != nil {
+            self.detailView?.layoutSubtreeIfNeeded()
+            height = max(484, ceil(self.detailView?.fittingSize.height ?? 484))
+        }
         self.setFrameSize(NSSize(width: 360, height: height))
         self.sizeCallback?(self.frame.size)
     }

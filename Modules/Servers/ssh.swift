@@ -27,8 +27,8 @@ internal final class SSHClient {
     private let executablePath: String
     private let controlDirectory: URL
     private let lock = NSLock()
-    private var processes: [String: Process] = [:]
-    private var cancelled: Set<String> = []
+    private var processes: [String: [ObjectIdentifier: Process]] = [:]
+    private var cancelled: Set<ObjectIdentifier> = []
 
     internal init(executablePath: String = "/usr/bin/ssh", controlDirectory: URL? = nil) {
         self.executablePath = executablePath
@@ -36,6 +36,14 @@ internal final class SSHClient {
     }
 
     internal func collect(_ config: ServerConfig, timeout: TimeInterval = 10) throws -> SSHCommandResult {
+        try self.execute(MetricsCommand.script, for: config, timeout: timeout, outputLimit: 64 * 1024)
+    }
+
+    internal func topProcesses(_ config: ServerConfig, timeout: TimeInterval = 10) throws -> SSHCommandResult {
+        try self.execute(ProcessesCommand.script, for: config, timeout: timeout, outputLimit: 256 * 1024)
+    }
+
+    private func execute(_ script: String, for config: ServerConfig, timeout: TimeInterval, outputLimit: Int) throws -> SSHCommandResult {
         try FileManager.default.createDirectory(at: self.controlDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let startedAt = Date()
         let task = Process()
@@ -71,15 +79,15 @@ internal final class SSHClient {
             throw SSHError.commandFailed(error.localizedDescription)
         }
         self.register(task, id: config.id)
-        defer { self.unregister(id: config.id) }
+        defer { self.unregister(task, id: config.id) }
 
-        let outputBuffer = LimitedBuffer(limit: 64 * 1024)
+        let outputBuffer = LimitedBuffer(limit: outputLimit)
         let errorBuffer = LimitedBuffer(limit: 16 * 1024)
         let drained = DispatchGroup()
         self.drain(output.fileHandleForReading, into: outputBuffer, group: drained)
         self.drain(error.fileHandleForReading, into: errorBuffer, group: drained)
 
-        try? input.fileHandleForWriting.write(contentsOf: Data(MetricsCommand.script.utf8))
+        try? input.fileHandleForWriting.write(contentsOf: Data(script.utf8))
         try? input.fileHandleForWriting.close()
 
         var timedOut = false
@@ -93,7 +101,7 @@ internal final class SSHClient {
         try? output.fileHandleForReading.close()
         try? error.fileHandleForReading.close()
 
-        if self.wasCancelled(id: config.id) { throw SSHError.cancelled }
+        if self.wasCancelled(task) { throw SSHError.cancelled }
         if timedOut { throw SSHError.timeout }
         if outputBuffer.exceeded || errorBuffer.exceeded { throw SSHError.outputLimit }
         guard task.terminationStatus == 0 else {
@@ -105,18 +113,20 @@ internal final class SSHClient {
 
     internal func cancel(id: String) {
         self.lock.lock()
-        self.cancelled.insert(id)
-        let task = self.processes[id]
+        let tasks = self.processes[id] ?? [:]
+        self.cancelled.formUnion(tasks.keys)
         self.lock.unlock()
-        if let task { self.terminate(task) }
+        tasks.values.forEach { self.terminate($0) }
     }
 
     internal func cancelAll() {
         self.lock.lock()
-        let tasks = self.processes
-        self.cancelled.formUnion(tasks.keys)
+        let tasks = self.processes.values.flatMap { $0.values }
+        for group in self.processes.values {
+            self.cancelled.formUnion(group.keys)
+        }
         self.lock.unlock()
-        tasks.values.forEach { self.terminate($0) }
+        tasks.forEach { self.terminate($0) }
     }
 
     private func controlPath(for config: ServerConfig) -> String {
@@ -126,21 +136,25 @@ internal final class SSHClient {
 
     private func register(_ task: Process, id: String) {
         self.lock.lock()
-        self.processes[id] = task
-        self.cancelled.remove(id)
+        let key = ObjectIdentifier(task)
+        self.processes[id, default: [:]][key] = task
+        self.cancelled.remove(key)
         self.lock.unlock()
     }
 
-    private func unregister(id: String) {
+    private func unregister(_ task: Process, id: String) {
         self.lock.lock()
-        self.processes.removeValue(forKey: id)
+        let key = ObjectIdentifier(task)
+        self.processes[id]?.removeValue(forKey: key)
+        if self.processes[id]?.isEmpty == true { self.processes.removeValue(forKey: id) }
+        self.cancelled.remove(key)
         self.lock.unlock()
     }
 
-    private func wasCancelled(id: String) -> Bool {
+    private func wasCancelled(_ task: Process) -> Bool {
         self.lock.lock()
         defer { self.lock.unlock() }
-        return self.cancelled.contains(id)
+        return self.cancelled.contains(ObjectIdentifier(task))
     }
 
     private func terminate(_ task: Process) {

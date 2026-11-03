@@ -6,12 +6,23 @@ public struct ServerConfig: Codable, Equatable {
     public var name: String
     public var sshAlias: String
     public var enabled: Bool
+    public var processesEnabled: Bool
 
-    public init(id: String = UUID().uuidString, name: String, sshAlias: String, enabled: Bool = true) {
+    public init(id: String = UUID().uuidString, name: String, sshAlias: String, enabled: Bool = true, processesEnabled: Bool = false) {
         self.id = id
         self.name = name
         self.sshAlias = sshAlias
         self.enabled = enabled
+        self.processesEnabled = processesEnabled
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(String.self, forKey: .id)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.sshAlias = try container.decode(String.self, forKey: .sshAlias)
+        self.enabled = try container.decode(Bool.self, forKey: .enabled)
+        self.processesEnabled = try container.decodeIfPresent(Bool.self, forKey: .processesEnabled) ?? false
     }
 }
 

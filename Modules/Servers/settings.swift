@@ -5,7 +5,9 @@ internal final class Settings: NSStackView, Settings_v {
     internal var callback: (() -> Void) = {}
     internal var intervalCallback: ((Int) -> Void) = { _ in }
     internal var historyCallback: ((Int) -> Void) = { _ in }
+    internal var processCountCallback: ((Int) -> Void) = { _ in }
     private var serversSection: PreferencesSection?
+    private let loadConfigurations: () -> [ServerConfig]
 
     private var updateInterval: Int {
         Store.shared.int(key: "Servers_updateInterval", defaultValue: 10)
@@ -14,7 +16,8 @@ internal final class Settings: NSStackView, Settings_v {
         ServerHistory.normalizedRetention(Store.shared.int(key: "Servers_historyRetention", defaultValue: ServerHistory.defaultRetention))
     }
 
-    internal init() {
+    internal init(loadConfigurations: @escaping () -> [ServerConfig] = ServerStore.load) {
+        self.loadConfigurations = loadConfigurations
         super.init(frame: .zero)
         self.orientation = .vertical
         self.distribution = .fill
@@ -48,8 +51,18 @@ internal final class Settings: NSStackView, Settings_v {
                 action: #selector(self.changeHistoryRetention),
                 items: ServerHistory.retentionOptions,
                 selected: "\(self.historyRetention)"
+            )),
+            PreferencesRow(localizedString("Number of processes"), component: self.selectView(
+                action: #selector(self.changeProcessCount),
+                items: ServerProcesses.countOptions,
+                selected: "\(ServerProcesses.count)"
             ))
         ]))
+        let processHelp = NSTextField(wrappingLabelWithString: localizedString("Top processes are off by default and loaded on demand."))
+        processHelp.font = .systemFont(ofSize: 11)
+        processHelp.textColor = .secondaryLabelColor
+        processHelp.preferredMaxLayoutWidth = 440
+        self.addArrangedSubview(processHelp)
         let historyHelp = NSTextField(wrappingLabelWithString: localizedString("History is kept in memory and cleared when Stats quits."))
         historyHelp.font = .systemFont(ofSize: 11)
         historyHelp.textColor = .secondaryLabelColor
@@ -74,7 +87,7 @@ internal final class Settings: NSStackView, Settings_v {
     private func reload() {
         self.serversSection?.removeFromSuperview()
         let section = PreferencesSection(title: localizedString("Servers"))
-        let configs = ServerStore.load()
+        let configs = self.loadConfigurations()
         if configs.isEmpty {
             section.add(PreferencesRow(localizedString("No servers configured"), component: NSView()))
         } else {
@@ -98,10 +111,19 @@ internal final class Settings: NSStackView, Settings_v {
         labels.alignment = .leading
         labels.spacing = 2
         let name = LabelField(config.name, size: 12)
+        name.lineBreakMode = .byTruncatingTail
         let alias = LabelField(config.sshAlias, size: 11)
         alias.textColor = .secondaryLabelColor
+        alias.lineBreakMode = .byTruncatingMiddle
         labels.addArrangedSubview(name)
         labels.addArrangedSubview(alias)
+
+        let processToggle = NSButton(checkboxWithTitle: localizedString("Top"), target: self, action: #selector(self.toggleProcesses(_:)))
+        processToggle.identifier = NSUserInterfaceItemIdentifier(config.id)
+        processToggle.controlSize = .small
+        processToggle.state = config.processesEnabled ? .on : .off
+        processToggle.isEnabled = config.enabled
+        processToggle.toolTip = localizedString("Allow on-demand Top processes for this server")
 
         let edit = NSButton(title: localizedString("Edit"), target: self, action: #selector(self.editServer(_:)))
         edit.identifier = NSUserInterfaceItemIdentifier(config.id)
@@ -115,6 +137,7 @@ internal final class Settings: NSStackView, Settings_v {
         row.addArrangedSubview(toggle)
         row.addArrangedSubview(labels)
         row.addArrangedSubview(NSView())
+        row.addArrangedSubview(processToggle)
         row.addArrangedSubview(edit)
         row.addArrangedSubview(remove)
         return row
@@ -234,7 +257,8 @@ internal final class Settings: NSStackView, Settings_v {
             id: existing?.id ?? UUID().uuidString,
             name: title.isEmpty ? target : title,
             sshAlias: target,
-            enabled: existing?.enabled ?? true
+            enabled: existing?.enabled ?? true,
+            processesEnabled: existing?.processesEnabled ?? false
         )
         ServerStore.upsert(config)
         self.reload()
@@ -260,6 +284,15 @@ internal final class Settings: NSStackView, Settings_v {
               var config = ServerStore.load().first(where: { $0.id == id }) else { return }
         config.enabled = controlState(sender)
         ServerStore.upsert(config)
+        self.reload()
+        self.callback()
+    }
+
+    @objc private func toggleProcesses(_ sender: NSButton) {
+        guard let id = sender.identifier?.rawValue,
+              var config = ServerStore.load().first(where: { $0.id == id }) else { return }
+        config.processesEnabled = sender.state == .on
+        ServerStore.upsert(config)
         self.callback()
     }
 
@@ -274,5 +307,12 @@ internal final class Settings: NSStackView, Settings_v {
         let retention = ServerHistory.normalizedRetention(value)
         Store.shared.set(key: "Servers_historyRetention", value: retention)
         self.historyCallback(retention)
+    }
+
+    @objc private func changeProcessCount(_ sender: NSMenuItem) {
+        guard let key = sender.representedObject as? String, let value = Int(key) else { return }
+        let count = ServerProcesses.normalizedCount(value)
+        Store.shared.set(key: "Servers_processCount", value: count)
+        self.processCountCallback(count)
     }
 }

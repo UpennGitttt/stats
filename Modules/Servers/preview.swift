@@ -2,6 +2,7 @@ import Cocoa
 import Kit
 
 internal final class Preview: PreviewWrapper {
+    internal var processesCallback: ((ServerConfig) -> Void) = { _ in }
     internal private(set) var selectedServerID: String?
     internal private(set) var detailView: ServerDetailView?
     internal let serverSelector = NSPopUpButton()
@@ -90,11 +91,20 @@ internal final class Preview: PreviewWrapper {
         if self.detailView?.id != server.config.id {
             self.detailView?.removeFromSuperview()
             let detail = ServerDetailView(server, showsBackButton: false, contentWidth: self.contentWidth)
+            detail.processesCallback = { [weak self] config in self?.processesCallback(config) }
             self.detailView = detail
             self.detailContainer.addArrangedSubview(detail)
         } else {
             self.detailView?.update(server)
         }
+    }
+
+    internal func processCallback(_ result: ServerProcessesResult, for config: ServerConfig) {
+        self.detailView?.processCallback(result, for: config)
+    }
+
+    internal func setProcessCount(_ value: Int) {
+        self.detailView?.setProcessCount(value)
     }
 
     @objc private func selectServer() {
@@ -109,6 +119,11 @@ internal final class Preview: PreviewWrapper {
 internal final class ServerDetailView: NSStackView {
     internal let id: String
     internal var backCallback: (() -> Void) = {}
+    internal var processesCallback: ((ServerConfig) -> Void) = { _ in }
+    internal var sizeCallback: (() -> Void) = {}
+    internal let modeControl = NSSegmentedControl(labels: [localizedString("Metrics"), localizedString("Top processes")], trackingMode: .selectOne, target: nil, action: nil)
+    internal let processesView: ServerProcessesView
+    private let metricsContent = NSStackView()
     private let name = LabelField(size: 16)
     private let alias = LabelField(size: 11)
     private let status = LabelField(size: 11)
@@ -123,10 +138,14 @@ internal final class ServerDetailView: NSStackView {
     private let memoryChart = LineChartView(num: 120, suffix: "%", scale: .fixed, fixedScale: 1, animation: false)
     private let networkChart = NetworkChartView(num: 120, minMax: false, animation: false)
     private let contentWidth: CGFloat
+    private var config: ServerConfig
+    private var processesRequested = false
 
     internal init(_ server: ServerSnapshot, showsBackButton: Bool = true, contentWidth: CGFloat = 332) {
         self.id = server.config.id
+        self.config = server.config
         self.contentWidth = contentWidth
+        self.processesView = ServerProcessesView(contentWidth: contentWidth)
         super.init(frame: .zero)
         self.orientation = .vertical
         self.distribution = .fill
@@ -157,16 +176,36 @@ internal final class ServerDetailView: NSStackView {
         self.system.lineBreakMode = .byTruncatingTail
         self.system.widthAnchor.constraint(equalToConstant: contentWidth).isActive = true
 
+        self.metricsContent.orientation = .vertical
+        self.metricsContent.alignment = .leading
+        self.metricsContent.distribution = .fill
+        self.metricsContent.spacing = 10
+        self.metricsContent.addArrangedSubview(self.system)
+        self.metricsContent.addArrangedSubview(self.memory)
+        self.metricsContent.addArrangedSubview(self.disk)
+        self.metricsContent.addArrangedSubview(self.chart(localizedString("CPU"), value: self.cpuValue, chart: self.cpuChart))
+        self.metricsContent.addArrangedSubview(self.chart(localizedString("Memory"), value: self.memoryValue, chart: self.memoryChart))
+        self.metricsContent.addArrangedSubview(self.chart(localizedString("Network"), value: self.networkValue, chart: self.networkChart))
+
+        self.modeControl.selectedSegment = 0
+        self.modeControl.controlSize = .small
+        self.modeControl.segmentDistribution = .fillEqually
+        self.modeControl.target = self
+        self.modeControl.action = #selector(self.changeDetailMode)
+        self.modeControl.toolTip = localizedString("Top processes are loaded on demand")
+        self.modeControl.widthAnchor.constraint(equalToConstant: 180).isActive = true
+
+        self.processesView.refreshCallback = { [weak self] in self?.requestProcesses() }
+        self.processesView.sizeCallback = { [weak self] in self?.sizeCallback() }
+        self.processesView.isHidden = true
+
         self.addArrangedSubview(self.name)
         self.addArrangedSubview(self.alias)
         self.addArrangedSubview(self.status)
         self.addArrangedSubview(self.error)
-        self.addArrangedSubview(self.system)
-        self.addArrangedSubview(self.memory)
-        self.addArrangedSubview(self.disk)
-        self.addArrangedSubview(self.chart(localizedString("CPU"), value: self.cpuValue, chart: self.cpuChart))
-        self.addArrangedSubview(self.chart(localizedString("Memory"), value: self.memoryValue, chart: self.memoryChart))
-        self.addArrangedSubview(self.chart(localizedString("Network"), value: self.networkValue, chart: self.networkChart))
+        self.addArrangedSubview(self.modeControl)
+        self.addArrangedSubview(self.metricsContent)
+        self.addArrangedSubview(self.processesView)
         self.update(server)
     }
 
@@ -198,11 +237,21 @@ internal final class ServerDetailView: NSStackView {
     }
 
     internal func update(_ server: ServerSnapshot) {
+        let targetChanged = self.config.sshAlias != server.config.sshAlias
+        self.config = server.config
         self.name.stringValue = server.config.name
         self.alias.stringValue = server.config.sshAlias
         self.status.stringValue = ServerFormat.status(server)
         self.error.stringValue = server.errorMessage ?? ""
         self.error.isHidden = server.errorMessage == nil
+        self.modeControl.setEnabled(server.config.enabled && server.config.processesEnabled, forSegment: 1)
+        if targetChanged {
+            self.processesRequested = false
+            self.processesView.clear()
+        }
+        if targetChanged || !server.config.processesEnabled || !server.config.enabled {
+            self.showMetrics()
+        }
 
         let history = server.history.isEmpty ? (server.metrics.map { [$0] } ?? []) : server.history
         self.cpuChart.setPoints(ServerHistory.percentagePoints(history, \.cpuUsage))
@@ -227,6 +276,46 @@ internal final class ServerDetailView: NSStackView {
         self.cpuValue.stringValue = ServerFormat.percent(metrics.cpuUsage)
         self.memoryValue.stringValue = ServerFormat.percent(metrics.memoryUsage)
         self.networkValue.stringValue = "↓ \(ServerFormat.speed(metrics.networkRead))  ↑ \(ServerFormat.speed(metrics.networkWrite))"
+    }
+
+    internal func showProcesses() {
+        guard self.config.enabled && self.config.processesEnabled else { return }
+        self.modeControl.selectedSegment = 1
+        self.metricsContent.isHidden = true
+        self.processesView.isHidden = false
+        self.sizeCallback()
+        if !self.processesRequested { self.requestProcesses() }
+    }
+
+    internal func processCallback(_ result: ServerProcessesResult, for config: ServerConfig) {
+        guard self.id == config.id, self.config.sshAlias == config.sshAlias else { return }
+        self.processesView.callback(result)
+    }
+
+    internal func setProcessCount(_ value: Int) {
+        self.processesView.setCount(value)
+    }
+
+    private func showMetrics() {
+        self.modeControl.selectedSegment = 0
+        self.metricsContent.isHidden = false
+        self.processesView.isHidden = true
+        self.sizeCallback()
+    }
+
+    private func requestProcesses() {
+        guard self.config.enabled && self.config.processesEnabled, !self.processesView.isLoading else { return }
+        self.processesRequested = true
+        self.processesView.beginLoading()
+        self.processesCallback(self.config)
+    }
+
+    @objc private func changeDetailMode() {
+        if self.modeControl.selectedSegment == 1 {
+            self.showProcesses()
+        } else {
+            self.showMetrics()
+        }
     }
 
     @objc private func back() {

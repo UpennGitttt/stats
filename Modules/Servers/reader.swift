@@ -15,6 +15,8 @@ public final class DataReader: Reader<ServersSnapshot> {
     private var generation: UInt = 0
     private var readRequested = false
     private var stopped = false
+    private var processCallbacks: [String: [UUID: (ServerProcessesResult) -> Void]] = [:]
+    private var processTasks: [String: UUID] = [:]
 
     internal init(
         ssh: SSHClient = SSHClient(),
@@ -36,6 +38,51 @@ public final class DataReader: Reader<ServersSnapshot> {
         self.stateQueue.async {
             self.retentionInterval = TimeInterval(ServerHistory.normalizedRetention(value))
             self.emit()
+        }
+    }
+
+    internal func readProcesses(_ config: ServerConfig, callback: @escaping (ServerProcessesResult) -> Void) {
+        self.stateQueue.async {
+            guard !self.stopped,
+                  let current = self.loadConfigurations().first(where: { $0.id == config.id }),
+                  current.enabled, current.processesEnabled, current.sshAlias == config.sshAlias else {
+                let result = ServerProcessesResult.failure(ServerProcessError(message: localizedString("Top processes are disabled for this server")))
+                DispatchQueue.main.async { callback(result) }
+                return
+            }
+
+            let requestID = UUID()
+            self.processCallbacks[current.id, default: [:]][requestID] = callback
+            guard self.processTasks[current.id] == nil else { return }
+            let taskID = UUID()
+            self.processTasks[current.id] = taskID
+            self.workerQueue.async { [weak self] in
+                guard let self else { return }
+                let result = Result { try self.ssh.topProcesses(current) }
+                self.stateQueue.async {
+                    self.completeProcesses(current, taskID: taskID, result: result)
+                }
+            }
+        }
+    }
+
+    private func completeProcesses(_ config: ServerConfig, taskID: UUID, result: Result<SSHCommandResult, Error>) {
+        guard self.processTasks[config.id] == taskID else { return }
+        self.processTasks.removeValue(forKey: config.id)
+        let callbacks = self.processCallbacks.removeValue(forKey: config.id) ?? [:]
+        let mapped: ServerProcessesResult
+        do {
+            switch result {
+            case .success(let value):
+                mapped = .success(try ServerProcessesParser.parse(value.output))
+            case .failure(let error):
+                throw error
+            }
+        } catch {
+            mapped = .failure(ServerProcessError(message: self.describe(error)))
+        }
+        DispatchQueue.main.async {
+            callbacks.values.forEach { $0(mapped) }
         }
     }
 

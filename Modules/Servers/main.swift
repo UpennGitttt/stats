@@ -25,13 +25,30 @@ public final class Servers: Module {
         self.settingsView.historyCallback = { [weak self] value in
             self?.dataReader?.setHistoryRetention(value)
         }
+        self.settingsView.processCountCallback = { [weak self] value in
+            self?.popupView.setProcessCount(value)
+            self?.previewView.setProcessCount(value)
+        }
         self.popupView.refreshCallback = { [weak self] in
             self?.dataReader?.read()
         }
         self.popupView.settingsCallback = {
             NotificationCenter.default.post(name: .toggleSettings, object: nil, userInfo: ["module": ModuleType.servers.stringValue])
         }
+        self.popupView.processesCallback = { [weak self] config in
+            self?.loadProcesses(config)
+        }
+        self.previewView.processesCallback = { [weak self] config in
+            self?.loadProcesses(config)
+        }
         self.setReaders([self.dataReader])
+    }
+
+    private func loadProcesses(_ config: ServerConfig) {
+        self.dataReader?.readProcesses(config) { [weak self] result in
+            self?.popupView.processCallback(result, for: config)
+            self?.previewView.processCallback(result, for: config)
+        }
     }
 
     private func callback(_ snapshot: ServersSnapshot?) {

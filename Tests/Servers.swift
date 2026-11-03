@@ -257,12 +257,200 @@ final class ServersTests: XCTestCase {
         XCTAssertEqual(ServerHistory.display(Array(history.prefix(20))).count, 20)
     }
 
+    func testProcessParsingSortingAndCountLimit() throws {
+        let output = """
+          1 root      2.0 10.0   1024 init
+          2 user     95.5  2.0 204800 node app
+          3 user      5.0 80.0   4096 postgres
+          4 user     -1.0  1.0   4096 invalid
+          5 user      1.0  1.0 9223372036854775807 overflow
+        """
+        let list = try ServerProcessesParser.parse(output)
+        XCTAssertEqual(list.processes.count, 3)
+        XCTAssertEqual(list.processes[1].pid, 2)
+        XCTAssertEqual(list.processes[1].user, "user")
+        XCTAssertEqual(list.processes[1].command, "node app")
+        XCTAssertEqual(list.processes[1].rssBytes, 209_715_200)
+        XCTAssertEqual(list.processes[1].cpuUsage, 0.955, accuracy: 0.0001)
+        XCTAssertEqual(ServerProcesses.top(list, by: .cpu, count: 20).map(\.pid), [2, 3, 1])
+        XCTAssertEqual(ServerProcesses.top(list, by: .memory, count: 20).map(\.pid), [3, 1, 2])
+        XCTAssertEqual(ServerProcesses.top(list, by: .cpu, count: 5).count, 3)
+        XCTAssertEqual(ServerProcesses.defaultCount, 15)
+        XCTAssertEqual(ServerProcesses.normalizedCount(20), 20)
+        XCTAssertEqual(ServerProcesses.normalizedCount(21), 15)
+        XCTAssertEqual(ServerProcesses.normalizedCount(0), 15)
+        XCTAssertThrowsError(try ServerProcessesParser.parse("not-a-process-list"))
+    }
+
+    func testLegacyServerConfigurationKeepsProcessesDisabled() throws {
+        let legacy = #"{"id":"one","name":"One","sshAlias":"one","enabled":true}"#
+        let decoded = try JSONDecoder().decode(ServerConfig.self, from: Data(legacy.utf8))
+        XCTAssertFalse(decoded.processesEnabled)
+        XCTAssertFalse(ServerConfig(name: "New", sshAlias: "new").processesEnabled)
+
+        let enabled = ServerConfig(name: "Enabled", sshAlias: "enabled", processesEnabled: true)
+        let data = try JSONEncoder().encode(enabled)
+        XCTAssertTrue(try JSONDecoder().decode(ServerConfig.self, from: data).processesEnabled)
+    }
+
+    func testProcessReaderIsOptInAndCoalescesRequests() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let executable = directory.appendingPathComponent("fake-ssh")
+        let counter = directory.appendingPathComponent("process-requests")
+        let script = """
+        #!/bin/sh
+        cat >/dev/null
+        count=0
+        if [ -f '\(counter.path)' ]; then count=$(cat '\(counter.path)'); fi
+        count=$((count + 1))
+        printf '%s\n' "$count" > '\(counter.path)'
+        sleep 0.2
+        printf '  2 user 95.5 2.0 204800 node app\n  1 root 2.0 10.0 1024 init\n'
+        """
+        try Data(script.utf8).write(to: executable)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: executable.path)
+        let client = SSHClient(executablePath: executable.path, controlDirectory: directory.appendingPathComponent("control"))
+        let direct = try client.topProcesses(ServerConfig(id: "direct", name: "Direct", sshAlias: "direct"))
+        XCTAssertEqual(try ServerProcessesParser.parse(direct.output).processes.count, 2)
+        try FileManager.default.removeItem(at: counter)
+
+        let disabled = ServerConfig(id: "disabled", name: "Disabled", sshAlias: "disabled")
+        let disabledClient = SSHClient(executablePath: executable.path, controlDirectory: directory.appendingPathComponent("disabled-control"))
+        let disabledReader = DataReader(ssh: disabledClient, loadConfigurations: { [disabled] })
+        let denied = self.expectation(description: "Disabled server does not execute process query")
+        disabledReader.readProcesses(disabled) { result in
+            guard case .failure = result else { return XCTFail("Expected disabled process query to fail") }
+            denied.fulfill()
+        }
+        self.wait(for: [denied], timeout: 1)
+        disabledReader.stop()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: counter.path))
+
+        let config = ServerConfig(id: "enabled", name: "Enabled", sshAlias: "enabled", processesEnabled: true)
+        let reader = DataReader(ssh: client, loadConfigurations: { [config] })
+        let responses = self.expectation(description: "Both views receive the same process response")
+        responses.expectedFulfillmentCount = 2
+        for _ in 0..<2 {
+            reader.readProcesses(config) { result in
+                switch result {
+                case .success(let list): XCTAssertEqual(list.processes.count, 2)
+                case .failure(let error): XCTFail("Unexpected process query error: \(error.message)")
+                }
+                responses.fulfill()
+            }
+        }
+        self.wait(for: [responses], timeout: 3)
+        reader.stop()
+        let calls = try String(contentsOf: counter, encoding: .utf8).split(separator: "\n").count
+        XCTAssertEqual(calls, 1)
+    }
+
+    func testProcessesScriptHasValidShellSyntax() throws {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/sh")
+        task.arguments = ["-n"]
+        let input = Pipe()
+        task.standardInput = input
+        try task.run()
+        try input.fileHandleForWriting.write(contentsOf: Data(ProcessesCommand.script.utf8))
+        try input.fileHandleForWriting.close()
+        task.waitUntilExit()
+        XCTAssertEqual(task.terminationStatus, 0)
+    }
+
+    @MainActor
+    func testProcessCountSettings() throws {
+        let key = "Servers_processCount"
+        let hadValue = Store.shared.exist(key: key)
+        let previous = Store.shared.int(key: key, defaultValue: ServerProcesses.defaultCount)
+        defer {
+            if hadValue {
+                Store.shared.set(key: key, value: previous)
+            } else {
+                Store.shared.remove(key)
+            }
+        }
+        let settings = Settings()
+        func descendants(of view: NSView) -> [NSView] {
+            view.subviews.flatMap { [$0] + descendants(of: $0) }
+        }
+        let popup = try XCTUnwrap(descendants(of: settings).compactMap { $0 as? NSPopUpButton }.first {
+            popup in popup.menu?.items.contains { ($0.representedObject as? String) == "20" } ?? false
+        })
+        XCTAssertEqual(popup.selectedItem?.representedObject as? String, "15")
+        var received: Int?
+        settings.processCountCallback = { received = $0 }
+        let item = try XCTUnwrap(popup.menu?.items.first { ($0.representedObject as? String) == "20" })
+        popup.select(item)
+        _ = try XCTUnwrap(popup.target as? NSObject).perform(try XCTUnwrap(popup.action), with: item)
+        XCTAssertEqual(received, 20)
+        XCTAssertEqual(Store.shared.int(key: key, defaultValue: 0), 20)
+    }
+
+    @MainActor
+    func testTopProcessesViewIsOptInAndUsesSelectedCount() throws {
+        let disabled = ServerConfig(id: "disabled", name: "Disabled", sshAlias: "disabled")
+        let disabledDetail = ServerDetailView(ServerSnapshot(config: disabled))
+        XCTAssertFalse(disabledDetail.modeControl.isEnabled(forSegment: 1))
+        disabledDetail.showProcesses()
+        XCTAssertEqual(disabledDetail.modeControl.selectedSegment, 0)
+
+        let config = ServerConfig(id: "enabled", name: "Enabled", sshAlias: "enabled", processesEnabled: true)
+        let detail = ServerDetailView(ServerSnapshot(config: config))
+        var requests = 0
+        detail.processesCallback = { _ in requests += 1 }
+        XCTAssertEqual(requests, 0)
+        detail.showProcesses()
+        detail.showProcesses()
+        XCTAssertEqual(requests, 1)
+        XCTAssertTrue(detail.processesView.isLoading)
+
+        let processes = (1...25).map { index in
+            ServerProcess(
+                pid: index,
+                user: "user",
+                cpuUsage: Double(index) / 100,
+                memoryUsage: Double(26 - index) / 100,
+                rssBytes: Int64(index * 1024),
+                command: "process-\(index)"
+            )
+        }
+        let list = ServerProcessList(processes: processes)
+        detail.processCallback(.success(list), for: config)
+        XCTAssertFalse(detail.processesView.isLoading)
+        XCTAssertEqual(detail.processesView.displayedProcesses.count, 15)
+        XCTAssertEqual(detail.processesView.displayedProcesses.first?.pid, 25)
+
+        detail.setProcessCount(20)
+        XCTAssertEqual(detail.processesView.displayedProcesses.count, 20)
+        XCTAssertEqual(requests, 1)
+        detail.modeControl.selectedSegment = 0
+        _ = detail.perform(try XCTUnwrap(detail.modeControl.action))
+        detail.showProcesses()
+        XCTAssertEqual(requests, 1)
+
+        let wrongHost = ServerConfig(id: config.id, name: config.name, sshAlias: "another-host", processesEnabled: true)
+        detail.processCallback(.success(ServerProcessList(processes: [])), for: wrongHost)
+        XCTAssertEqual(detail.processesView.displayedProcesses.count, 20)
+
+        detail.setFrameSize(NSSize(width: 360, height: detail.fittingSize.height))
+        detail.layoutSubtreeIfNeeded()
+        try self.capture(detail, name: "processes")
+
+        detail.processCallback(.failure(ServerProcessError(message: "Query failed")), for: config)
+        XCTAssertTrue(detail.processesView.displayedProcesses.isEmpty)
+        detail.setProcessCount(21)
+        XCTAssertEqual(ServerProcesses.normalizedCount(21), 15)
+    }
+
     @MainActor
     func testLiveSSHMetricsCollection() throws {
         guard let alias = ProcessInfo.processInfo.environment["STATS_TEST_SSH_ALIAS"], !alias.isEmpty else {
             throw XCTSkip("Set STATS_TEST_SSH_ALIAS to test a trusted SSH host")
         }
-        let config = ServerConfig(name: alias, sshAlias: alias)
+        let config = ServerConfig(name: alias, sshAlias: alias, processesEnabled: true)
         let client = SSHClient()
         let firstResult = try client.collect(config)
         let first = try LinuxMetricsParser.parse(firstResult.output)
@@ -288,6 +476,18 @@ final class ServersTests: XCTestCase {
         popup.showDetails(snapshot)
         popup.layoutSubtreeIfNeeded()
         try self.capture(popup, name: "live-detail")
+
+        let processResult = try client.topProcesses(config)
+        let processList = try ServerProcessesParser.parse(processResult.output)
+        XCTAssertFalse(processList.processes.isEmpty)
+        XCTAssertLessThanOrEqual(ServerProcesses.top(processList, by: .cpu, count: 20).count, 20)
+        let detail = ServerDetailView(snapshot)
+        detail.showProcesses()
+        detail.processCallback(.success(processList), for: config)
+        detail.setFrameSize(NSSize(width: 360, height: detail.fittingSize.height))
+        detail.layoutSubtreeIfNeeded()
+        try self.capture(detail, name: "live-processes")
+        print("Live SSH process query returned \(processList.processes.count) processes")
     }
 
     @MainActor
@@ -357,12 +557,22 @@ final class ServersTests: XCTestCase {
                 Store.shared.remove(key)
             }
         }
-        let settings = Settings()
+        let config = ServerConfig(id: "layout", name: "Production server", sshAlias: "production-long-alias")
+        let settings = Settings(loadConfigurations: { [config] })
+        settings.load(widgets: [])
         settings.setFrameSize(NSSize(width: 480, height: 560))
         settings.layoutSubtreeIfNeeded()
         try self.capture(settings, name: "settings")
         func descendants(of view: NSView) -> [NSView] {
             view.subviews.flatMap { [$0] + descendants(of: $0) }
+        }
+        let buttons = descendants(of: settings).compactMap { $0 as? NSButton }
+        let topToggle = try XCTUnwrap(buttons.first { $0.title == localizedString("Top") })
+        XCTAssertEqual(topToggle.state, .off)
+        XCTAssertTrue(topToggle.isEnabled)
+        for title in ["Top", "Edit", "Remove"] {
+            let button = try XCTUnwrap(buttons.first { $0.title == localizedString(title) })
+            XCTAssertTrue(settings.bounds.contains(button.convert(button.bounds, to: settings)))
         }
         let popups = descendants(of: settings).compactMap { $0 as? NSPopUpButton }
         let historyPopup = try XCTUnwrap(popups.first { popup in
