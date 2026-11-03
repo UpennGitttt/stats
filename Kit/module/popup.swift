@@ -268,6 +268,7 @@ internal class PopupView: NSView {
         self.foreground.setFrameSize(size)
         self.background.setFrameSize(size)
         self.resizeBody(size, scrollVisible: isScrollVisible)
+        self.header.setFrameSize(NSSize(width: size.width, height: Constants.Popup.headerHeight))
         self.header.setFrameOrigin(NSPoint(x: 0, y: size.height - Constants.Popup.headerHeight))
         
         if let view = view {
@@ -329,6 +330,7 @@ internal class PopupView: NSView {
         self.foreground.setFrameSize(windowSize)
         self.background.setFrameSize(windowSize)
         self.resizeBody(windowSize, scrollVisible: isScrollVisible)
+        self.header.setFrameSize(NSSize(width: windowSize.width, height: Constants.Popup.headerHeight))
         self.header.setFrameOrigin(NSPoint(
             x: self.header.frame.origin.x,
             y: self.body.frame.height + (Constants.Popup.margins*2)
@@ -408,12 +410,16 @@ internal class HeaderView: NSStackView {
         settings.bezelStyle = .regularSquare
         settings.translatesAutoresizingMaskIntoConstraints = false
         settings.imageScaling = .scaleNone
-        settings.image = iconFromSymbol(name: "command", scale: .large)
-        settings.contentTintColor = .lightGray
+        settings.imagePosition = .imageOnly
+        settings.image = iconFromSymbol(name: self.module == .servers ? "gearshape" : "command", scale: .large)
+        if self.module == .servers {
+            settings.image?.accessibilityDescription = localizedString("Settings")
+        }
+        settings.contentTintColor = .secondaryLabelColor
         settings.isBordered = false
         settings.action = #selector(self.openSettings)
         settings.target = self
-        settings.toolTip = localizedString("Open module")
+        settings.toolTip = localizedString(self.module == .servers ? "Open module settings" : "Open module")
         settings.focusRingType = .none
         
         self.addArrangedSubview(activity)
@@ -421,9 +427,9 @@ internal class HeaderView: NSStackView {
         self.addArrangedSubview(settings)
         
         NSLayoutConstraint.activate([
-            title.widthAnchor.constraint(
-                equalToConstant: self.frame.width - activity.intrinsicContentSize.width - settings.intrinsicContentSize.width
-            )
+            activity.widthAnchor.constraint(equalToConstant: 42),
+            settings.widthAnchor.constraint(equalTo: activity.widthAnchor),
+            title.widthAnchor.constraint(equalTo: self.widthAnchor, constant: -84)
         ])
     }
     

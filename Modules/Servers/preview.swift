@@ -126,10 +126,11 @@ internal final class ServerDetailView: NSStackView {
     private let metricsContent = NSStackView()
     private let name = LabelField(size: 16)
     private let alias = LabelField(size: 11)
-    private let status = LabelField(size: 11)
+    private let status = LabelField(size: 10)
+    private let statusDot = DotView(color: .tertiaryLabelColor, size: 6)
     private let memory = LabelField(size: 11)
     private let disk = LabelField(size: 11)
-    private let system = LabelField(size: 11)
+    private let system = LabelField(size: 10)
     private let error = NSTextField(wrappingLabelWithString: "")
     private let cpuValue = LabelField(size: 11)
     private let memoryValue = LabelField(size: 11)
@@ -151,14 +152,20 @@ internal final class ServerDetailView: NSStackView {
         self.distribution = .fill
         self.alignment = .leading
         self.spacing = 10
-        self.edgeInsets = NSEdgeInsets(top: 8, left: 14, bottom: 12, right: 14)
+        self.edgeInsets = NSEdgeInsets(top: 6, left: 14, bottom: 14, right: 14)
 
         if showsBackButton {
-            let back = NSButton(title: localizedString("‹ Servers"), target: self, action: #selector(self.back))
+            let back = NSButton(title: localizedString("Servers"), target: self, action: #selector(self.back))
             back.isBordered = false
-            back.font = .systemFont(ofSize: 11)
+            back.font = .systemFont(ofSize: 11, weight: .medium)
             back.contentTintColor = .secondaryLabelColor
             back.alignment = .left
+            back.image = NSImage(systemSymbolName: "chevron.left", accessibilityDescription: nil)?.withSymbolConfiguration(
+                NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
+            )
+            back.imagePosition = .imageLeading
+            back.toolTip = localizedString("Back to servers")
+            back.heightAnchor.constraint(equalToConstant: 20).isActive = true
             self.addArrangedSubview(back)
         }
 
@@ -175,11 +182,24 @@ internal final class ServerDetailView: NSStackView {
         self.system.textColor = .secondaryLabelColor
         self.system.lineBreakMode = .byTruncatingTail
         self.system.widthAnchor.constraint(equalToConstant: contentWidth).isActive = true
+        for field in [self.memory, self.disk] {
+            field.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+            field.textColor = .secondaryLabelColor
+            field.lineBreakMode = .byTruncatingTail
+            field.widthAnchor.constraint(equalToConstant: contentWidth).isActive = true
+        }
+
+        let statusRow = NSStackView()
+        statusRow.orientation = .horizontal
+        statusRow.alignment = .centerY
+        statusRow.spacing = 6
+        statusRow.addArrangedSubview(self.statusDot)
+        statusRow.addArrangedSubview(self.status)
 
         self.metricsContent.orientation = .vertical
         self.metricsContent.alignment = .leading
         self.metricsContent.distribution = .fill
-        self.metricsContent.spacing = 10
+        self.metricsContent.spacing = 12
         self.metricsContent.addArrangedSubview(self.system)
         self.metricsContent.addArrangedSubview(self.memory)
         self.metricsContent.addArrangedSubview(self.disk)
@@ -193,7 +213,8 @@ internal final class ServerDetailView: NSStackView {
         self.modeControl.target = self
         self.modeControl.action = #selector(self.changeDetailMode)
         self.modeControl.toolTip = localizedString("Top processes are loaded on demand")
-        self.modeControl.widthAnchor.constraint(equalToConstant: 180).isActive = true
+        self.modeControl.widthAnchor.constraint(equalToConstant: contentWidth).isActive = true
+        self.modeControl.heightAnchor.constraint(equalToConstant: 24).isActive = true
 
         self.processesView.refreshCallback = { [weak self] in self?.requestProcesses() }
         self.processesView.sizeCallback = { [weak self] in self?.sizeCallback() }
@@ -201,7 +222,7 @@ internal final class ServerDetailView: NSStackView {
 
         self.addArrangedSubview(self.name)
         self.addArrangedSubview(self.alias)
-        self.addArrangedSubview(self.status)
+        self.addArrangedSubview(statusRow)
         self.addArrangedSubview(self.error)
         self.addArrangedSubview(self.modeControl)
         self.addArrangedSubview(self.metricsContent)
@@ -241,7 +262,11 @@ internal final class ServerDetailView: NSStackView {
         self.config = server.config
         self.name.stringValue = server.config.name
         self.alias.stringValue = server.config.sshAlias
+        self.alias.isHidden = server.config.name == server.config.sshAlias
+        self.alias.toolTip = server.config.sshAlias
         self.status.stringValue = ServerFormat.status(server)
+        self.status.textColor = server.state == .error ? .systemRed : .secondaryLabelColor
+        self.statusDot.setColor(ServerFormat.color(server.state))
         self.error.stringValue = server.errorMessage ?? ""
         self.error.isHidden = server.errorMessage == nil
         self.modeControl.setEnabled(server.config.enabled && server.config.processesEnabled, forSegment: 1)

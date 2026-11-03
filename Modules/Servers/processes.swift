@@ -115,7 +115,7 @@ internal final class ServerProcessesView: NSStackView {
     internal private(set) var isLoading = false
 
     private let contentWidth: CGFloat
-    private let sortControl = NSSegmentedControl(labels: [localizedString("CPU"), localizedString("Memory")], trackingMode: .selectOne, target: nil, action: nil)
+    private let sortControl = NSSegmentedControl(labels: [localizedString("CPU"), localizedString("RAM")], trackingMode: .selectOne, target: nil, action: nil)
     private let refreshButton = NSButton(title: localizedString("Refresh"), target: nil, action: nil)
     private let listView = NSStackView()
     private let scrollView = NSScrollView()
@@ -133,22 +133,28 @@ internal final class ServerProcessesView: NSStackView {
         self.orientation = .vertical
         self.alignment = .leading
         self.distribution = .fill
-        self.spacing = 8
+        self.spacing = 10
 
         self.sortControl.selectedSegment = 0
         self.sortControl.controlSize = .small
+        self.sortControl.segmentDistribution = .fillEqually
         self.sortControl.target = self
         self.sortControl.action = #selector(self.changeSort)
-        self.sortControl.widthAnchor.constraint(equalToConstant: 130).isActive = true
+        self.sortControl.widthAnchor.constraint(equalToConstant: 132).isActive = true
+        self.sortControl.heightAnchor.constraint(equalToConstant: 24).isActive = true
         self.refreshButton.bezelStyle = .rounded
         self.refreshButton.controlSize = .small
         self.refreshButton.target = self
         self.refreshButton.action = #selector(self.refresh)
+        self.refreshButton.heightAnchor.constraint(equalToConstant: 24).isActive = true
 
+        let sortLabel = LabelField(localizedString("Sort by"), size: 10)
+        sortLabel.textColor = .secondaryLabelColor
         let toolbar = NSStackView()
         toolbar.orientation = .horizontal
         toolbar.alignment = .centerY
         toolbar.spacing = 8
+        toolbar.addArrangedSubview(sortLabel)
         toolbar.addArrangedSubview(self.sortControl)
         toolbar.addArrangedSubview(NSView())
         toolbar.addArrangedSubview(self.refreshButton)
@@ -163,6 +169,7 @@ internal final class ServerProcessesView: NSStackView {
         self.scrollView.drawsBackground = false
         self.scrollView.borderType = .noBorder
         self.scrollView.hasHorizontalScroller = false
+        self.scrollView.hasVerticalScroller = true
         self.scrollView.autohidesScrollers = true
         self.scrollView.translatesAutoresizingMaskIntoConstraints = false
         self.scrollView.widthAnchor.constraint(equalToConstant: contentWidth).isActive = true
@@ -238,7 +245,7 @@ internal final class ServerProcessesView: NSStackView {
             self.snapshot = snapshot
             self.render()
             let time = DateFormatter.localizedString(from: snapshot.collectedAt, dateStyle: .none, timeStyle: .medium)
-            self.footer.stringValue = "CPU: lifetime average · \(localizedString("Updated %0", time))"
+            self.footer.stringValue = "CPU since process start · \(localizedString("Updated %0", time))"
         case .failure(let error):
             self.snapshot = nil
             self.displayedProcesses = []
@@ -267,6 +274,11 @@ internal final class ServerProcessesView: NSStackView {
         let header = ServerProcessRow(nil)
         self.listView.addArrangedSubview(header)
         header.widthAnchor.constraint(equalTo: self.listView.widthAnchor).isActive = true
+        let separator = NSBox()
+        separator.boxType = .separator
+        separator.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        self.listView.addArrangedSubview(separator)
+        separator.widthAnchor.constraint(equalTo: self.listView.widthAnchor).isActive = true
         for process in processes {
             let row = ServerProcessRow(process)
             self.listView.addArrangedSubview(row)
@@ -275,8 +287,8 @@ internal final class ServerProcessesView: NSStackView {
     }
 
     private func updateHeight(rowCount: Int) {
-        let contentHeight = CGFloat(rowCount + 1) * 26
-        self.scrollHeight?.constant = min(contentHeight, 420)
+        let contentHeight = CGFloat(rowCount + 1) * 24 + 1
+        self.scrollHeight?.constant = min(contentHeight, 408)
         self.documentHeight?.constant = contentHeight
     }
 
@@ -298,17 +310,17 @@ private final class ServerProcessRow: NSStackView {
         self.alignment = .centerY
         self.distribution = .fill
         self.spacing = 6
-        self.heightAnchor.constraint(equalToConstant: 26).isActive = true
+        self.heightAnchor.constraint(equalToConstant: 24).isActive = true
 
-        let name = LabelField(process?.command ?? localizedString("Process"), size: 11)
-        name.font = .systemFont(ofSize: 11, weight: process == nil ? .semibold : .regular)
+        let name = LabelField(process?.command ?? localizedString("Process"), size: process == nil ? 10 : 11)
+        name.font = .systemFont(ofSize: process == nil ? 10 : 11, weight: process == nil ? .medium : .regular)
         name.textColor = process == nil ? .secondaryLabelColor : .labelColor
         name.lineBreakMode = .byTruncatingTail
         name.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        let pid = self.field(process.map { "\($0.pid)" } ?? "PID", width: 44)
-        let cpu = self.field(process.map { ServerFormat.percent($0.cpuUsage) } ?? localizedString("CPU"), width: 52)
-        let memory = self.field(process.map { ServerFormat.percent($0.memoryUsage) } ?? localizedString("RAM"), width: 52)
+        let pid = self.field(process.map { "\($0.pid)" } ?? "PID", width: 52, header: process == nil)
+        let cpu = self.field(process.map { ServerFormat.percent($0.cpuUsage) } ?? localizedString("CPU"), width: 48, header: process == nil)
+        let memory = self.field(process.map { ServerFormat.percent($0.memoryUsage) } ?? localizedString("RAM"), width: 48, header: process == nil)
         self.addArrangedSubview(name)
         self.addArrangedSubview(pid)
         self.addArrangedSubview(cpu)
@@ -324,9 +336,12 @@ private final class ServerProcessRow: NSStackView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    private func field(_ value: String, width: CGFloat) -> NSTextField {
-        let field = LabelField(value, size: 11)
-        field.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+    private func field(_ value: String, width: CGFloat, header: Bool) -> NSTextField {
+        let field = LabelField(value, size: header ? 10 : 11)
+        field.font = header
+            ? .systemFont(ofSize: 10, weight: .medium)
+            : .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+        field.textColor = header ? .secondaryLabelColor : .labelColor
         field.alignment = .right
         field.widthAnchor.constraint(equalToConstant: width).isActive = true
         return field

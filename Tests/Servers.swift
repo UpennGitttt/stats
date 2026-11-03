@@ -1,6 +1,6 @@
 import Cocoa
 import XCTest
-import Kit
+@testable import Kit
 @testable import Servers
 
 final class ServersTests: XCTestCase {
@@ -446,6 +446,60 @@ final class ServersTests: XCTestCase {
     }
 
     @MainActor
+    func testPanelHeaderAndDetailLayout() throws {
+        let config = ServerConfig(id: "panel", name: "volceai", sshAlias: "volceai", processesEnabled: true)
+        let metrics = ServerMetrics(cpuUsage: 0.12, memoryUsage: 0.37, diskUsage: 0.52, latencyMS: 157, osName: "Ubuntu 24.04", hostname: "volceai")
+        let snapshot = ServerSnapshot(config: config, state: .online, metrics: metrics, lastSuccessAt: Date())
+        let popup = Popup()
+        popup.callback(ServersSnapshot(servers: [snapshot]))
+        popup.showDetails(snapshot)
+        let detail = try XCTUnwrap(popup.arrangedSubviews.compactMap { $0 as? ServerDetailView }.first)
+        detail.showProcesses()
+        let names = ["codex", "java", "python", "node", "dockerd", "uvicorn", "claude", "omni-flow", "exe", "postgres", "redis-server", "nginx", "containerd", "sshd", "systemd"]
+        let processes = names.enumerated().map { index, name in
+            ServerProcess(
+                pid: 1000 + index * 137,
+                user: "user",
+                cpuUsage: Double((index * 7) % 13) / 100,
+                memoryUsage: Double(names.count - index) / 100,
+                rssBytes: Int64(index + 1) * 64 * 1024 * 1024,
+                command: name
+            )
+        }
+        popup.processCallback(.success(ServerProcessList(processes: processes)), for: config)
+
+        let window = PopupWindow(title: "Servers", module: .servers, view: popup, visibilityCallback: { _ in })
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        window.appearance = NSAppearance(named: .darkAqua)
+        let content = try XCTUnwrap(window.contentView)
+        content.layoutSubtreeIfNeeded()
+
+        func descendants(of view: NSView) -> [NSView] {
+            view.subviews.flatMap { [$0] + descendants(of: $0) }
+        }
+        let header = try XCTUnwrap(content.subviews.compactMap { $0 as? HeaderView }.first)
+        header.layoutSubtreeIfNeeded()
+        let buttons = header.arrangedSubviews.compactMap { $0 as? NSButton }
+        let title = try XCTUnwrap(header.arrangedSubviews.compactMap { $0 as? NSTextField }.first)
+        let settings = try XCTUnwrap(buttons.first { $0.toolTip == localizedString("Open module settings") })
+        XCTAssertEqual(header.frame.width, content.bounds.width, accuracy: 0.001)
+        XCTAssertEqual(buttons.count, 2)
+        XCTAssertEqual(buttons[0].frame.width, buttons[1].frame.width, accuracy: 0.5)
+        XCTAssertEqual(title.frame.midX, header.bounds.midX, accuracy: 0.5)
+        XCTAssertEqual(settings.frame.maxX, header.bounds.maxX, accuracy: 0.5)
+        XCTAssertEqual(settings.image?.accessibilityDescription, localizedString("Settings"))
+        XCTAssertEqual(detail.modeControl.frame.width, 332, accuracy: 0.001)
+        let duplicateLabels = descendants(of: detail).compactMap { $0 as? NSTextField }.filter { $0.stringValue == "volceai" }
+        XCTAssertEqual(duplicateLabels.filter { !$0.isHidden }.count, 1)
+        for title in ["PID", "CPU", "RAM"] {
+            let field = try XCTUnwrap(descendants(of: detail.processesView).compactMap { $0 as? NSTextField }.first { $0.stringValue == title })
+            XCTAssertEqual(field.alignment, .right)
+        }
+        try self.capture(content, name: "panel-dark", appearance: .darkAqua)
+    }
+
+    @MainActor
     func testLiveSSHMetricsCollection() throws {
         guard let alias = ProcessInfo.processInfo.environment["STATS_TEST_SSH_ALIAS"], !alias.isEmpty else {
             throw XCTSkip("Set STATS_TEST_SSH_ALIAS to test a trusted SSH host")
@@ -772,12 +826,12 @@ final class ServersTests: XCTestCase {
     }
 
     @MainActor
-    private func capture(_ view: NSView, name: String) throws {
-        view.appearance = NSAppearance(named: .aqua)
+    private func capture(_ view: NSView, name: String, appearance: NSAppearance.Name = .aqua) throws {
+        view.appearance = NSAppearance(named: appearance)
         guard let image = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: image)
-        NSColor.white.setFill()
+        NSColor(white: appearance == .darkAqua ? 0.16 : 1, alpha: 1).setFill()
         NSBezierPath(rect: view.bounds).fill()
         view.cacheDisplay(in: view.bounds, to: image)
         NSGraphicsContext.restoreGraphicsState()
