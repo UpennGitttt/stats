@@ -461,6 +461,107 @@ final class ServersTests: XCTestCase {
     }
 
     @MainActor
+    func testPreviewUsesSharedSnapshotsAndKeepsSelection() throws {
+        let date = Date(timeIntervalSince1970: 1_000)
+        let metrics = ServerMetrics(
+            cpuUsage: 0.12,
+            memoryUsage: 0.5,
+            memoryUsed: 4_000_000_000,
+            memoryTotal: 8_000_000_000,
+            diskUsage: 0.25,
+            diskUsed: 50_000_000_000,
+            diskTotal: 200_000_000_000,
+            networkRead: 1_200,
+            networkWrite: 800,
+            latencyMS: 24,
+            osName: "Ubuntu 24.04",
+            hostname: "production-1",
+            collectedAt: date
+        )
+        let first = ServerSnapshot(
+            config: ServerConfig(id: "first", name: "Production", sshAlias: "prod"),
+            state: .online,
+            metrics: metrics,
+            history: [metrics],
+            lastSuccessAt: date
+        )
+        let second = ServerSnapshot(
+            config: ServerConfig(id: "second", name: "Backup", sshAlias: "backup"),
+            state: .error,
+            errorMessage: "Connection timed out"
+        )
+        let preview = Preview()
+        preview.callback(ServersSnapshot(servers: [first, second]))
+        XCTAssertEqual(preview.serverSelector.itemTitles, ["Production", "Backup"])
+        XCTAssertEqual(preview.selectedServerID, "first")
+        XCTAssertEqual(preview.detailView?.id, "first")
+
+        var updatedMetrics = metrics
+        updatedMetrics.cpuUsage = 0.35
+        let updated = ServerSnapshot(config: first.config, state: .online, metrics: updatedMetrics, history: [updatedMetrics], lastSuccessAt: date)
+        let originalDetail = preview.detailView
+        preview.callback(ServersSnapshot(servers: [updated, second]))
+        XCTAssertTrue(originalDetail === preview.detailView)
+
+        func descendants(of view: NSView) -> [NSView] {
+            view.subviews.flatMap { [$0] + descendants(of: $0) }
+        }
+        XCTAssertTrue(descendants(of: preview).compactMap { ($0 as? NSTextField)?.stringValue }.contains("35%"))
+
+        let backupItem = try XCTUnwrap(preview.serverSelector.menu?.items.first { ($0.representedObject as? String) == "second" })
+        preview.serverSelector.select(backupItem)
+        let action = try XCTUnwrap(preview.serverSelector.action)
+        _ = preview.perform(action)
+        XCTAssertEqual(preview.selectedServerID, "second")
+        XCTAssertEqual(preview.detailView?.id, "second")
+        XCTAssertTrue(descendants(of: preview).compactMap { ($0 as? NSTextField)?.stringValue }.contains("Connection timed out"))
+
+        let disabled = ServerSnapshot(config: ServerConfig(id: "second", name: "Backup", sshAlias: "backup", enabled: false))
+        preview.callback(ServersSnapshot(servers: [updated, disabled]))
+        XCTAssertEqual(preview.serverSelector.itemTitles, ["Production"])
+        XCTAssertEqual(preview.selectedServerID, "first")
+        XCTAssertEqual(preview.detailView?.id, "first")
+
+        preview.setFrameSize(NSSize(width: 480, height: 600))
+        preview.layoutSubtreeIfNeeded()
+        let charts = descendants(of: preview).filter { $0 is LineChartView || $0 is NetworkChartView }
+        XCTAssertEqual(charts.count, 5)
+        XCTAssertEqual(charts.filter { $0 is NetworkChartView }.count, 1)
+        for chart in charts {
+            XCTAssertEqual(chart.frame.width, 450, accuracy: 0.001)
+        }
+        XCTAssertLessThanOrEqual(preview.fittingSize.width, 510)
+        try self.capture(preview, name: "preview")
+    }
+
+    @MainActor
+    func testPreviewShowsEmptyAndConnectingStates() {
+        let preview = Preview()
+        preview.callback(ServersSnapshot())
+        XCTAssertNil(preview.selectedServerID)
+        XCTAssertNil(preview.detailView)
+        XCTAssertFalse(preview.serverSelector.isEnabled)
+
+        let connecting = ServerSnapshot(config: ServerConfig(id: "first", name: "Production", sshAlias: "prod"), state: .connecting)
+        preview.callback(ServersSnapshot(servers: [connecting]))
+        XCTAssertEqual(preview.selectedServerID, "first")
+        XCTAssertTrue(preview.serverSelector.isEnabled)
+        XCTAssertEqual(preview.detailView?.id, "first")
+
+        func descendants(of view: NSView) -> [NSView] {
+            view.subviews.flatMap { [$0] + descendants(of: $0) }
+        }
+        let labels = descendants(of: preview).compactMap { ($0 as? NSTextField)?.stringValue }
+        XCTAssertTrue(labels.contains(localizedString("Waiting for the first response…")))
+        XCTAssertTrue(labels.contains("Connecting…"))
+
+        preview.callback(ServersSnapshot())
+        XCTAssertNil(preview.selectedServerID)
+        XCTAssertFalse(preview.serverSelector.isEnabled)
+        XCTAssertEqual(preview.serverSelector.numberOfItems, 0)
+    }
+
+    @MainActor
     private func capture(_ view: NSView, name: String) throws {
         view.appearance = NSAppearance(named: .aqua)
         guard let image = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }

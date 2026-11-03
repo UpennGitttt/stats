@@ -233,6 +233,7 @@
 		5E5E00262FC0000000000001 /* parser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00332FC0000000000001 /* parser.swift */; };
 		5E5E00272FC0000000000001 /* popup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00342FC0000000000001 /* popup.swift */; };
 		5E5E00282FC0000000000001 /* settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00352FC0000000000001 /* settings.swift */; };
+		5E5E002B2FC0000000000001 /* preview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00372FC0000000000001 /* preview.swift */; };
 		5E5E00292FC0000000000001 /* config.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5E5E00362FC0000000000001 /* config.plist */; };
 		5E5E002A2FC0000000000001 /* Kit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A2846F72666A9CC00EC1F6D /* Kit.framework */; };
 		5E5E00512FC0000000000001 /* Servers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E00502FC0000000000001 /* Servers.swift */; };
@@ -669,6 +670,7 @@
 		5E5E00332FC0000000000001 /* parser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = parser.swift; sourceTree = "<group>"; };
 		5E5E00342FC0000000000001 /* popup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = popup.swift; sourceTree = "<group>"; };
 		5E5E00352FC0000000000001 /* settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = settings.swift; sourceTree = "<group>"; };
+		5E5E00372FC0000000000001 /* preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = preview.swift; sourceTree = "<group>"; };
 		5E5E00362FC0000000000001 /* config.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config.plist; sourceTree = "<group>"; };
 		5E5E00502FC0000000000001 /* Servers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Servers.swift; sourceTree = "<group>"; };
 		5E8289FF3074085D00DB0CA0 /* Icon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Icon.swift; sourceTree = "<group>"; };
@@ -1093,6 +1095,7 @@
 				5E5E00332FC0000000000001 /* parser.swift */,
 				5E5E00342FC0000000000001 /* popup.swift */,
 				5E5E00352FC0000000000001 /* settings.swift */,
+				5E5E00372FC0000000000001 /* preview.swift */,
 				5E5E00362FC0000000000001 /* config.plist */,
 			);
 			path = Servers;
@@ -2316,6 +2319,7 @@
 				5E5E00262FC0000000000001 /* parser.swift in Sources */,
 				5E5E00272FC0000000000001 /* popup.swift in Sources */,
 				5E5E00282FC0000000000001 /* settings.swift in Sources */,
+				5E5E002B2FC0000000000001 /* preview.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

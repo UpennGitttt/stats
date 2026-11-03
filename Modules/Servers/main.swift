@@ -4,12 +4,14 @@ import Kit
 public final class Servers: Module {
     private let popupView: Popup
     private let settingsView: Settings
+    private let previewView: Preview
     private var dataReader: DataReader?
 
     public init() {
         self.popupView = Popup()
         self.settingsView = Settings()
-        super.init(moduleType: .servers, popup: self.popupView, settings: self.settingsView)
+        self.previewView = Preview()
+        super.init(moduleType: .servers, popup: self.popupView, settings: self.settingsView, preview: self.previewView)
 
         self.dataReader = DataReader { [weak self] snapshot in
             self?.callback(snapshot)
@@ -36,6 +38,7 @@ public final class Servers: Module {
         guard let snapshot, self.enabled else { return }
         DispatchQueue.main.async {
             self.popupView.callback(snapshot)
+            self.previewView.callback(snapshot)
         }
 
         let enabled = snapshot.servers.filter(\.config.enabled)

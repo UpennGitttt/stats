@@ -8,6 +8,11 @@
 	<false/>
 	<key>Symbol</key>
 	<string>server.rack</string>
+	<key>Preview</key>
+	<dict>
+		<key>available</key>
+		<true/>
+	</dict>
 	<key>Widgets</key>
 	<dict>
 		<key>text</key>
